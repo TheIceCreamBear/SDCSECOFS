@@ -8,7 +8,7 @@ Chances are, if you are looking at this repository and have no idea what it mean
  - have a terminal open in the directory this README.MD file is in
  - run the following command: ```<compiler> src/ourprogram.c src/userprogram.c src/concurrencylib.c -o bin/<outputFileName>```
 
-Please note: precompiled version are included as part of the git tracking, with the formatting `<os>-[option]-<arch>.<ext>` where:
+Please note: precompiled versions are included as part of the git tracking, with the formatting `<os>[-option]-<arch>.<ext>` where:
  - `os` is either: 
    - `windows`
    - `linux`
@@ -16,7 +16,7 @@ Please note: precompiled version are included as part of the git tracking, with 
  - `option`
    - optional, used to show evolution of the binaries over time
    - blank: when blank the compiled binary is only the function naming text
-   - `threads`: shows the cross platform threads off
+   - `-threads`: shows the cross platform threads off
  - `arch` is: `x86_64`
  - `ext` is either: 
    - `exe` for windows

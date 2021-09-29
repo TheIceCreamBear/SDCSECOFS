@@ -18,7 +18,7 @@ CSThread* createThread(threadFunc func, void* arg) {
 int joinThread(CSThread* thread) {
     #if defined(_WIN32) // windows
     WaitForSingleObject(thread->thread, INFINITE);
-    GetExitCodeThread(thread->thread, &((DWORD) thread->returnVal));
+    GetExitCodeThread(thread->thread, &(thread->returnVal));
     #elif defined(__APPLE__) || defined(__linux__)
     pthread_join(thread->thread, &thread->returnVal);
     #endif

@@ -3,17 +3,20 @@
 
 #ifdef _WIN32 // windows
 #include <windows.h>
-typedef DWORD WINAPI (*threadFunc) (LPVOID param);
-#define THREAD_RET DWORD WINAPI
+typedef DWORD (*threadFunc) (LPVOID param);
+#define THREAD_FUNC_RET DWORD WINAPI
+#define THREAD_RET DWORD
 #define THREAD_PARAM LPVOID
 #elif __linux__ // linux stuff
 #include <pthread.h>
 typedef void* (*threadFunc) (void* param);
+#define THREAD_FUNC_RET void*
 #define THREAD_RET void*
 #define THREAD_PARAM void*
 #elif __APPLE__
 #include <pthread.h>
 typedef void* (*threadFunc) (void* param);
+#define THREAD_FUNC_RET void*
 #define THREAD_RET void*
 #define THREAD_PARAM void*
 #endif
@@ -28,7 +31,7 @@ typedef struct CSThread {
     #elif defined(__APPLE__) || defined(__linux__)
     pthread_t thread;
     #endif
-    void* returnVal;
+    THREAD_RET returnVal;
 } CSThread;
 
 

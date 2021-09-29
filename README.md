@@ -6,7 +6,7 @@ Chances are, if you are looking at this repository and have no idea what it mean
 ***IF*** you know that this project is for you or related to you, to compile on any platform
  - make sure you have a compiler installed available from command line
  - have a terminal open in the directory this README.MD file is in
- - run the following command: ```<compiler> src/ourprogram.c src/userprogram.c src/concurrencylib.c -o <outputFileName>```
+ - run the following command: ```<compiler> src/ourprogram.c src/userprogram.c src/concurrencylib.c -o bin/<outputFileName>```
 
 Please note: precompiled version are included as part of the git tracking, with the formatting `<os>-[option]-<arch>.<ext>` where:
  - `os` is either: 

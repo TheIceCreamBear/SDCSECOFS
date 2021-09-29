@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 
 #ifdef _WIN32 // windows
 #include <windows.h>

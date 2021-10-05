@@ -2,28 +2,35 @@
 
 THREAD_RET thing1(THREAD_PARAM param) {
     int threadNum = *((int*) param);
-    printf("Inside Thread %d, doing thing 1\n", threadNum);
-
-    return (void*) 123;
+    int i;
+    for(i = 0; i < 10; i++)
+    {
+        printf("Inside Thread 1, at loop %d\n", i);
+    }
+    return 123;
 }
 
 THREAD_RET thing2(THREAD_PARAM param) {
     int threadNum = *((int*) param);
-    printf("Inside Thread %d, doing thing 2\n", threadNum);
-
-    return (void*) "abc";
+    int i;
+    for(i = 0; i < 10; i++)
+    {
+        printf("Inside Thread 2, at loop %d\n", i);
+    }
+    return 456;
 }
 
 int main(int argc, char** argv) {
     // show overwriting of user program
+
     printf("Program Start: %s\n", __func__);
     printf("Calling userMain...\n");
     userMain();
     printf("Back in %s\n", __func__);
 
     // create threads
-    CSThread* thread1 = createThread(thing1, (void*) 1);
-    CSThread* thread2 = createThread(thing2, (void*) 2);
+    CSThread* thread1 = createThread(&thing1, (void*)1);
+    CSThread* thread2 = createThread(&thing2, (void*)2);
 
     // wait for threads to finish and join them back into this thread
     joinThread(thread1);

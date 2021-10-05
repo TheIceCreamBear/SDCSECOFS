@@ -3,10 +3,10 @@
 
 #ifdef _WIN32 // windows
 #include <windows.h>
-typedef DWORD (*threadFunc) (LPVOID param);
 #define THREAD_FUNC_RET DWORD WINAPI
 #define THREAD_RET DWORD
 #define THREAD_PARAM LPVOID
+typedef THREAD_RET (*threadFunc)(THREAD_PARAM);
 #elif __linux__ // linux stuff
 #include <pthread.h>
 typedef void* (*threadFunc) (void* param);

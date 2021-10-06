@@ -6,7 +6,7 @@ CSThread* createThread(threadFunc func, void* arg) {
         return NULL;
     }
     #if defined(_WIN32) // windows
-    thread->thread = CreateThread(NULL, 0, func, &arg, 0, 0);
+    thread->thread = CreateThread(NULL, 0, func, arg, 0, 0);
     #elif defined(__APPLE__) || defined(__linux__)
     pthread_create(&thread->thread, NULL, func, arg);
     #endif

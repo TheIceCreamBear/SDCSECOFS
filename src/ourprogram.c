@@ -2,11 +2,13 @@
 
 THREAD_RET thing(THREAD_PARAM param) {
     int i;
+    int ret = *(int*)param;
     for(i=0; i<10; i++)
     {
-        printf("Inside Thread %d, on loop %d\n", *((int*)param), i);
+        printf("Inside Thread %d, on loop %d\n", GetCurrentThreadId(), i);
     }
-    return 100+(*(int*)param);
+    free(param);
+    return ret;
 }
 
 
@@ -20,17 +22,19 @@ int main(int argc, char** argv) {
     //create semaphore
     createSemaphore();
 
-    // create threads
+    //declare variables
     int i;
     int maxThread = 10;
     void* param;
     CSThread* thread[maxThread];
+    
+    // create threads
     for(i=0; i<maxThread; i++)
     {
         param = malloc(sizeof(int));
         *(int*)param = i;
         thread[i] = createThread(thing, param);
-        printf("Thread %d created. id = %d\n", i, thread[i]->id);
+        printf("Thread %d created\n", thread[i]->id);
     }
 
     // wait for threads to finish and join them back into this thread
@@ -42,7 +46,7 @@ int main(int argc, char** argv) {
     // get return values for printing
     for(i=0; i<maxThread; i++)
     {
-        printf("Thread %d returns: %d\n", i, thread[i]->returnVal);
+        printf("Thread %d returns: %d\n", thread[i]->id, thread[i]->returnVal);
     }
 
     // free malloced CSThread struct

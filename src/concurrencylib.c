@@ -38,7 +38,7 @@ void freeCSThread(CSThread* thread) {
     // TODO
 
     // free struct
-    free(thread);
+    CloseHandle(thread);
 }
 
 void createSemaphore()
@@ -51,6 +51,58 @@ void createSemaphore()
         printf("createSemaphore error: %d. Exiting...\n", errno);
         exit(0);
     }
+    #endif
+    
+    return;
+}
+
+void incrementSemaphore()
+{
+    #if defined(_WIN32) // windows
+    ReleaseSemaphore(sem, 1, NULL);
+    #elif defined(__APPLE__) || defined(__linux__)
+    sem_post(sem);
+    #endif
+    
+    return;
+}
+
+//returns 1 if available, else 0
+int decrementSemaphore()
+{
+    #if defined(_WIN32) // windows
+    if(WaitForSingleObject(sem, 0) == WAIT_OBJECT_0)
+    {
+        return 1;
+    }
+    else
+    {
+        return 0;
+    }
+    printf("decrementSemaphore error %d. Exiting...\n", GetLastError());
+    exit(0);
+    #elif defined(__APPLE__) || defined(__linux__)
+    if(!sem_wait(sem))
+    {
+        return 1;
+    }
+    else
+    {
+        return 0;
+    }
+    printf("decrementSemaphore error %d. Exiting...\n", errno);
+    exit(0);
+    #endif
+    
+    return 0;
+}
+
+void freeSemaphore()
+{
+    #if defined(_WIN32) // windows
+    CloseHandle(sem);
+    #elif defined(__APPLE__) || defined(__linux__)
+    sem_close(sem);
     #endif
     
     return;

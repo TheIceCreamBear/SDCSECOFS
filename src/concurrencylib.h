@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define MAX_SEM 10
+#define MAX_SEM 5
 #ifdef _WIN32 // windows
 #include <windows.h>
 typedef DWORD (*threadFunc) (LPVOID param);
@@ -22,7 +22,7 @@ typedef void* (*threadFunc) (void* param);
 #define THREAD_FUNC_RET void*
 #define THREAD_RET void*
 #define THREAD_PARAM void*
-sem_t sem;
+sem_t* sem;
 #endif
 
 // meta: proto type for the compiled name of the user function so we have access to it in our program
@@ -46,3 +46,9 @@ int joinThread(CSThread* thread);
 void freeCSThread(CSThread* thread);
 
 void createSemaphore();
+
+void incrementSemaphore();
+
+int decrementSemaphore();
+
+void freeSemaphore();

@@ -1,11 +1,21 @@
 #include "concurrencylib.h"
 
 THREAD_RET thing(THREAD_PARAM param) {
-    int i;
+    int i, wait;
     int ret = *(int*)param;
     for(i=0; i<10; i++)
     {
-        printf("Inside Thread %d, on loop %d\n", GetCurrentThreadId(), i);
+        wait = decrementSemaphore();
+        if(wait)
+        {
+            printf("Thread %d completed loop %d\n", GetCurrentThreadId(), i);
+            incrementSemaphore();
+
+        }
+        else
+        {
+            printf("Thread %d held on loop %d\n", GetCurrentThreadId(), i--);
+        }
     }
     free(param);
     return ret;

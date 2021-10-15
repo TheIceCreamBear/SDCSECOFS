@@ -1,18 +1,26 @@
 #include "concurrencylib.h"
 
-THREAD_RET thing1(THREAD_PARAM param) {
-    int threadNum = *((int*) param);
-    printf("Inside Thread %d, doing thing 1\n", threadNum);
+THREAD_RET thing(THREAD_PARAM param) {
+    int i, wait;
+    int ret = *(int*)param;
+    for(i=0; i<10; i++)
+    {
+        wait = decrementSemaphore();
+        if(wait)
+        {
+            printf("Thread %d completed loop %d\n", GetCurrentThreadId(), i);
+            incrementSemaphore();
 
-    return (void*) 123;
+        }
+        else
+        {
+            printf("Thread %d held on loop %d\n", GetCurrentThreadId(), i--);
+        }
+    }
+    free(param);
+    return ret;
 }
 
-THREAD_RET thing2(THREAD_PARAM param) {
-    int threadNum = *((int*) param);
-    printf("Inside Thread %d, doing thing 2\n", threadNum);
-
-    return (void*) "abc";
-}
 
 int main(int argc, char** argv) {
     // show overwriting of user program
@@ -21,24 +29,41 @@ int main(int argc, char** argv) {
     userMain();
     printf("Back in %s\n", __func__);
 
+    //create semaphore
+    createSemaphore();
+
+    //declare variables
+    int i;
+    int maxThread = 10;
+    void* param;
+    CSThread* thread[maxThread];
+    
     // create threads
-    CSThread* thread1 = createThread(thing1, (void*) 1);
-    CSThread* thread2 = createThread(thing2, (void*) 2);
+    for(i=0; i<maxThread; i++)
+    {
+        param = malloc(sizeof(int));
+        *(int*)param = i;
+        thread[i] = createThread(thing, param);
+        printf("Thread %d created\n", thread[i]->id);
+    }
 
     // wait for threads to finish and join them back into this thread
-    joinThread(thread1);
-    joinThread(thread2);
+    for(i=0; i<maxThread; i++)
+    {
+        joinThread(thread[i]);
+    }
 
     // get return values for printing
-    int retVal1 = *((int*) thread1->returnVal);
-    char* retVal2 = (char*) thread2->returnVal;
-
-    printf("Thread 1 returns: %d\n", retVal1);
-    printf("Thread 2 returns: %s\n", retVal2);
+    for(i=0; i<maxThread; i++)
+    {
+        printf("Thread %d returns: %d\n", thread[i]->id, thread[i]->returnVal);
+    }
 
     // free malloced CSThread struct
-    freeCSThread(thread1);
-    freeCSThread(thread2);
+    for(i=0; i<maxThread; i++)
+    {
+        freeCSThread(thread[i]);
+    }
 
     return 0;
 }

@@ -9,11 +9,11 @@ CSThread* createThread(threadFunc func, void* arg) {
     thread->thread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)func, arg, 0, &(thread->id));
     #elif defined(__APPLE__) || defined(__linux__)
     pthread_create(&thread->thread, NULL, func, arg);
+    
     #endif
 
     return thread;
 }
-
 int joinThread(CSThread* thread) {
     #if defined(_WIN32) // windows
     WaitForSingleObject(thread->thread, INFINITE);
@@ -27,7 +27,7 @@ int joinThread(CSThread* thread) {
         exit(0);
     }
     #elif defined(__APPLE__) || defined(__linux__)
-    pthread_join(thread->thread, &thread->returnVal);
+    pthread_join(thread->thread, thread->returnVal);
     #endif
     // return 0 if error, this is a TODO
     return 1;
@@ -38,41 +38,45 @@ void freeCSThread(CSThread* thread) {
     // TODO
 
     // free struct
-    CloseHandle(thread);
+    free(thread);
 }
 
 void createSemaphore()
 {
     #if defined(_WIN32) // windows
-    sem = CreateSemaphore(NULL, MAX_SEM, MAX_SEM, NULL);
+    sem = CreateSemaphoreA(NULL, MAX_SEM, MAX_SEM, NULL);
+    semCount = (LPLONG)malloc(sizeof(LONG));
+    *semCount = MAX_SEM;
     #elif defined(__APPLE__) || defined(__linux__)
-    if(sem_init(sem, 0, MAX_SEM))
+    if(sem_init(&sem, 0, MAX_SEM))
     {
         printf("createSemaphore error: %d. Exiting...\n", errno);
         exit(0);
     }
     #endif
-    
     return;
 }
 
-void incrementSemaphore()
+void signal()
 {
     #if defined(_WIN32) // windows
-    ReleaseSemaphore(sem, 1, NULL);
+    ReleaseSemaphore(sem, 1, semCount);
+    *semCount = *semCount + 1;
     #elif defined(__APPLE__) || defined(__linux__)
-    sem_post(sem);
+    sem_post(&sem);
+    sem_getvalue(&sem, &semCount);
     #endif
     
     return;
 }
 
 //returns 1 if available, else 0
-int decrementSemaphore()
+int wait()
 {
     #if defined(_WIN32) // windows
     if(WaitForSingleObject(sem, 0) == WAIT_OBJECT_0)
     {
+        *semCount = *semCount - 1;
         return 1;
     }
     else
@@ -82,8 +86,9 @@ int decrementSemaphore()
     printf("decrementSemaphore error %d. Exiting...\n", GetLastError());
     exit(0);
     #elif defined(__APPLE__) || defined(__linux__)
-    if(!sem_wait(sem))
+    if(!sem_trywait(&sem))
     {
+        sem_getvalue(&sem, &semCount);
         return 1;
     }
     else
@@ -97,12 +102,12 @@ int decrementSemaphore()
     return 0;
 }
 
-void freeSemaphore()
+void closeSemaphore()
 {
     #if defined(_WIN32) // windows
     CloseHandle(sem);
     #elif defined(__APPLE__) || defined(__linux__)
-    sem_close(sem);
+    sem_close(&sem);
     #endif
     
     return;

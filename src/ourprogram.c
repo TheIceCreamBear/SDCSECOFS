@@ -1,10 +1,15 @@
 #include "concurrencylib.h"
 
 THREAD_RET thing(THREAD_PARAM param) {
-    
     int i;
+    #ifdef _WIN32
     DWORD ret;
     ret = *(DWORD*)param;
+    free(param);
+    #else
+    void* ret;
+    ret = param;
+    #endif
     for(i=0; i<5; i++)
     {
         if(wait())
@@ -14,7 +19,7 @@ THREAD_RET thing(THREAD_PARAM param) {
             GetCurrentThreadId(), i, *semCount);
             Sleep(1*1000);
             #else 
-            (int)pthread_self(), i, semCount);
+            (int)pthread_self(), i, *semCount);
             sleep(1);
             #endif
             signal();
@@ -22,7 +27,7 @@ THREAD_RET thing(THREAD_PARAM param) {
             #ifdef _WIN32 
             GetCurrentThreadId(), i, *semCount);
             #else 
-            (int)pthread_self(), i, semCount);
+            (int)pthread_self(), i, *semCount);
             #endif
         }
         else
@@ -32,12 +37,11 @@ THREAD_RET thing(THREAD_PARAM param) {
             GetCurrentThreadId(), i--, *semCount);
             Sleep(1*1000);
             #else 
-            (int)pthread_self(), i--, semCount);
+            (int)pthread_self(), i--, *semCount);
             sleep(1);
             #endif
         }
     }
-    free(param);
     return ret;
 }
 
@@ -57,6 +61,7 @@ int main(int argc, char** argv) {
     int maxThread = 5;
     void* param;
     CSThread* thread[maxThread];
+
     // create threads
     for(i=0; i<maxThread; i++)
     {
@@ -77,7 +82,6 @@ int main(int argc, char** argv) {
     {
         joinThread(thread[i]);
     }
-
     // get return values for printing
     for(i=0; i<maxThread; i++)
     {
@@ -85,7 +89,7 @@ int main(int argc, char** argv) {
         #ifdef _WIN32 
         thread[i]->id, thread[i]->returnVal);
         #else 
-        (int)thread[i]->thread, thread[i]->returnVal);
+        (int)thread[i]->thread, *(int*)thread[i]->returnVal);
         #endif
     }
 
@@ -95,6 +99,7 @@ int main(int argc, char** argv) {
         freeCSThread(thread[i]);
     }
     closeSemaphore(sem);
-    printf("Successfully exited\n");
+
+    printf("\nProcess ended with exit code 0\n");
     return 0;
 }

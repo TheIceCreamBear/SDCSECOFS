@@ -19,15 +19,20 @@ typedef void* (*threadFunc) (void* param);
 #define THREAD_FUNC_RET void*
 #define THREAD_RET void*
 #define THREAD_PARAM void*
-sem_t* sem;
+sem_t sem;
 int* semCount;
 #elif __APPLE__
 #include <pthread.h>
+#include <semaphore.h>
+#include <errno.h>
+#include <unistd.h>
+#include <fcntl.h>
 typedef void* (*threadFunc) (void* param);
 #define THREAD_FUNC_RET void*
 #define THREAD_RET void*
 #define THREAD_PARAM void*
-sem_t* sem;
+sem_t *sem;
+int* semCount;
 #endif
 
 // meta: proto type for the compiled name of the user function so we have access to it in our program

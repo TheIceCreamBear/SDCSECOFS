@@ -1,3 +1,4 @@
+#Run with make -f makefile.mak
 ifeq ($(OS),Windows_NT)
 run : compile
 	./bin/test-windows-threads-x86-64.exe

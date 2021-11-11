@@ -14,6 +14,7 @@ CSThread* createThread(threadFunc func, void* arg) {
 
     return thread;
 }
+
 int joinThread(CSThread* thread) {
     #if defined(_WIN32) // windows
     WaitForSingleObject(thread->thread, INFINITE);
@@ -53,16 +54,9 @@ void createSemaphore()
     sem = CreateSemaphoreA(NULL, MAX_SEM, MAX_SEM, NULL);
     semCount = (LPLONG)malloc(sizeof(LONG));
     *semCount = MAX_SEM;
-    #elif defined(__linux__)
-    if(sem_init(&sem, 0, MAX_SEM))
-    {
-        printf("createSemaphore error: %d. Exiting...\n", errno);
-        exit(0);
-    }
-    semCount = (int*)malloc(sizeof(int));
-    *semCount = MAX_SEM;
-    #elif defined(__APPLE__)
-    sem = sem_open("/main", O_CREAT, 0660, 0);
+    #elif defined(__linux__) || defined(__APPLE__)
+    sem = sem_open("main", O_CREAT | O_EXCL, 0644, MAX_SEM);
+    sem_unlink("main");
     if(sem == SEM_FAILED)
     {
         printf("createSemaphore error: %d. Exiting...\n", errno);
@@ -74,15 +68,12 @@ void createSemaphore()
     return;
 }
 
-void signal()
+void semSignal()
 {
     #if defined(_WIN32) // windows
     ReleaseSemaphore(sem, 1, semCount);
     *semCount = *semCount + 1;
-    #elif defined(__linux__)
-    sem_post(&sem);
-    sem_getvalue(&sem, semCount);
-    #elif defined(__APPLe__)
+    #elif defined(__linux__) || defined(__APPLE__)
     sem_post(sem);
     *semCount = *semCount + 1;
     #endif
@@ -91,7 +82,7 @@ void signal()
 }
 
 //returns 1 if available, else 0
-int wait()
+int semWait()
 {
     #if defined(_WIN32) // windows
     if(WaitForSingleObject(sem, 0) == WAIT_OBJECT_0)
@@ -105,19 +96,7 @@ int wait()
     }
     printf("decrementSemaphore error %d. Exiting...\n", GetLastError());
     exit(0);
-    #elif defined(__linux__)
-    if(!sem_trywait(&sem))
-    {
-        sem_getvalue(&sem, semCount);
-        return 1;
-    }
-    else
-    {
-        return 0;
-    }
-    printf("decrementSemaphore error %d. Exiting...\n", errno);
-    exit(0);
-    #elif defined(__APPLE__)
+    #elif defined(__linux__) || defined(__APPLE__)
     if(!sem_trywait(sem))
     {
         *semCount = *semCount - 1;
@@ -138,9 +117,7 @@ void closeSemaphore()
 {
     #if defined(_WIN32) // windows
     CloseHandle(sem);
-    #elif defined(__linux__)
-    sem_close(&sem);
-    #elif defined(__APPLE__)
+    #elif defined(__linux__) || defined(__APPLE__)
     sem_close(sem);
     #endif
 

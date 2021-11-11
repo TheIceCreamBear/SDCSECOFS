@@ -2,6 +2,7 @@
 #include <stdlib.h>
 
 #define MAX_SEM 3
+#define MAX_THREAD 5
 #ifdef _WIN32 // windows
 #include <windows.h>
 typedef DWORD (*threadFunc) (LPVOID param);
@@ -10,18 +11,7 @@ typedef DWORD (*threadFunc) (LPVOID param);
 #define THREAD_PARAM LPVOID
 HANDLE sem;
 LPLONG semCount;
-#elif __linux__ // linux stuff
-#include <pthread.h>
-#include <semaphore.h>
-#include <errno.h>
-#include <unistd.h>
-typedef void* (*threadFunc) (void* param);
-#define THREAD_FUNC_RET void*
-#define THREAD_RET void*
-#define THREAD_PARAM void*
-sem_t sem;
-int* semCount;
-#elif __APPLE__
+#elif __linux__ || __APPLE__
 #include <pthread.h>
 #include <semaphore.h>
 #include <errno.h>
@@ -57,8 +47,8 @@ void freeCSThread(CSThread* thread);
 
 void createSemaphore();
 
-void signal();
+void semSignal();
 
-int wait();
+int semWait();
 
 void closeSemaphore();

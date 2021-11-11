@@ -12,7 +12,7 @@ THREAD_RET thing(THREAD_PARAM param) {
     #endif
     for(i=0; i<5; i++)
     {
-        if(wait())
+        if(semWait())
         {
             printf("Thread %d working on loop %d. Sem decreased to %d\n", 
             #ifdef _WIN32 
@@ -22,7 +22,7 @@ THREAD_RET thing(THREAD_PARAM param) {
             (int)pthread_self(), i, *semCount);
             sleep(1);
             #endif
-            signal();
+            semSignal();
             printf("Thread %d completed loop %d. Sem increased to %d\n",
             #ifdef _WIN32 
             GetCurrentThreadId(), i, *semCount);
@@ -48,6 +48,7 @@ THREAD_RET thing(THREAD_PARAM param) {
 
 int main(int argc, char** argv) {
     // show overwriting of user program
+    errno = 0;
     printf("Program Start: %s\n", __func__);
     printf("Calling userMain...\n");
     userMain();
@@ -58,12 +59,11 @@ int main(int argc, char** argv) {
 
     //declare variables
     int i;
-    int maxThread = 5;
     void* param;
-    CSThread* thread[maxThread];
+    CSThread* thread[MAX_THREAD];
 
     // create threads
-    for(i=0; i<maxThread; i++)
+    for(i=0; i<MAX_THREAD; i++)
     {
         param = malloc(sizeof(int));
         *(int*)param = i;
@@ -77,13 +77,13 @@ int main(int argc, char** argv) {
         );
     }
 
-    // wait for threads to finish and join them back into this thread
-    for(i=0; i<maxThread; i++)
+    // semWait for threads to finish and join them back into this thread
+    for(i=0; i<MAX_THREAD; i++)
     {
         joinThread(thread[i]);
     }
     // get return values for printing
-    for(i=0; i<maxThread; i++)
+    for(i=0; i<MAX_THREAD; i++)
     {
         printf("Thread %d returns: %d\n", 
         #ifdef _WIN32 
@@ -94,7 +94,7 @@ int main(int argc, char** argv) {
     }
 
     // free malloced CSThread struct
-    for(i=0; i<maxThread; i++)
+    for(i=0; i<MAX_THREAD; i++)
     {
         freeCSThread(thread[i]);
     }

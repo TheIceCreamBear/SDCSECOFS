@@ -20,8 +20,9 @@ typedef void* (*threadFunc) (void* param);
 #define THREAD_FUNC_RET void*
 #define THREAD_RET void*
 #define THREAD_PARAM void*
-sem_t *sem;
-int* semCount;
+#define SEM_TYPE sem_t*
+#define SEM_NAME const char*
+#define SEM_VALUE unsigned int
 #endif
 
 // meta: proto type for the compiled name of the user function so we have access to it in our program
@@ -42,11 +43,10 @@ typedef struct CSThread {
 typedef struct CSSem {
     SEM_TYPE sem;
     #if defined(_WIN32) // windows
-    LPLONG count;
+    SEM_VALUE count;
     #elif defined(__APPLE__) || defined(__linux__)
-    pthread_t thread;
+    SEM_VALUE count;
     #endif
-    THREAD_RET returnVal;
 } CSSem;
 
 //Thread functions

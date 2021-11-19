@@ -18,28 +18,28 @@ THREAD_RET thing(THREAD_PARAM param) {
         {
             printf("Thread %d working on loop %d. Sem decreased to %d\n", 
             #ifdef _WIN32 
-            GetCurrentThreadId(), i, *sem->count);
+            GetCurrentThreadId(), i, sem->count);
             Sleep(1*1000);
             #else 
-            (int)pthread_self(), i, *semCount);
+            (int)pthread_self(), i, sem->count);
             sleep(1);
             #endif
             semSignal(sem);
             printf("Thread %d completed loop %d. Sem increased to %d\n",
             #ifdef _WIN32 
-            GetCurrentThreadId(), i, *sem->count);
+            GetCurrentThreadId(), i, sem->count);
             #else 
-            (int)pthread_self(), i, *semCount);
+            (int)pthread_self(), i, sem->count);
             #endif
         }
         else
         {
             printf("Thread %d held on loop %d due to Sem <= %d\n",
             #ifdef _WIN32 
-            GetCurrentThreadId(), i--, *sem->count);
+            GetCurrentThreadId(), i--, sem->count);
             Sleep(1*1000);
             #else 
-            (int)pthread_self(), i--, *semCount);
+            (int)pthread_self(), i--, sem->count);
             sleep(1);
             #endif
         }
@@ -64,7 +64,7 @@ int main(int argc, char** argv) {
     CSThread* thread[maxThread];
 
     //create semaphore
-    sem = semCreate(NULL, maxSem);
+    sem = semCreate("main", maxSem);
     printf("Semaphore created with max value %d\n", maxSem);
 
     // create threads

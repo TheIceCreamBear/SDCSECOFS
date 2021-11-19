@@ -50,21 +50,23 @@ void freeCSThread(CSThread* thread) {
 
 CSSem* semCreate(SEM_NAME name, SEM_VALUE maxValue)
 {
-    #if defined(_WIN32) // windows
     CSSem* sem = (CSSem*)malloc(sizeof(sem));
+    #if defined(_WIN32) // windows
     sem->sem = CreateSemaphoreA(NULL, maxValue, maxValue, name);
-    sem->count = (LPLONG)malloc(sizeof(LONG));
-    *sem->count = maxValue;
+    sem->count = maxValue;
     #elif defined(__linux__) || defined(__APPLE__)
-    sem = sem_open("main", O_CREAT | O_EXCL, 0644, MAX_SEM);
+    if(name == NULL)
+    {
+        name = "NULL";
+    }
+    sem->sem = sem_open(name, O_CREAT | O_EXCL, 0644, maxValue);
     sem_unlink("main");
-    if(sem == SEM_FAILED)
+    if(sem->sem == SEM_FAILED)
     {
         printf("createSemaphore error: %d. Exiting...\n", errno);
         exit(0);
     }
-    semCount = (int*)malloc(sizeof(int));
-    *semCount = MAX_SEM;
+    sem->count = maxValue;
     #endif
     return sem;
 }
@@ -73,11 +75,11 @@ CSSem* semCreate(SEM_NAME name, SEM_VALUE maxValue)
 int semSignal(CSSem* sem)
 {
     #if defined(_WIN32) // windows
-    ReleaseSemaphore(sem->sem, 1, sem->count);
-    *sem->count = *sem->count + 1;
+    ReleaseSemaphore(sem->sem, 1, NULL);
+    sem->count = sem->count + 1;
     #elif defined(__linux__) || defined(__APPLE__)
-    sem_post(sem);
-    *semCount = *semCount + 1;
+    sem_post(sem->sem);
+    sem->count = sem->count + 1;
     #endif
     
     return 1;
@@ -89,7 +91,7 @@ int semWait(CSSem* sem)
     #if defined(_WIN32) // windows
     if(WaitForSingleObject(sem->sem, 0) == WAIT_OBJECT_0)
     {
-        *sem->count = *sem->count - 1;
+        sem->count = sem->count - 1;
         return 1;
     }
     else
@@ -99,9 +101,9 @@ int semWait(CSSem* sem)
     printf("decrementSemaphore error %d. Exiting...\n", GetLastError());
     exit(0);
     #elif defined(__linux__) || defined(__APPLE__)
-    if(!sem_trywait(sem))
+    if(!sem_trywait(sem->sem))
     {
-        *semCount = *semCount - 1;
+        sem->count = sem->count - 1;
         return 1;
     }
     else
@@ -122,7 +124,8 @@ int semClose(CSSem* sem)
     CloseHandle(sem->sem);
     free(sem);
     #elif defined(__linux__) || defined(__APPLE__)
-    sem_close(sem);
+    sem_close(sem->sem);
+    free(sem);
     #endif
 
     return 1;

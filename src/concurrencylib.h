@@ -1,16 +1,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define MAX_SEM 3
-#define MAX_THREAD 5
 #ifdef _WIN32 // windows
 #include <windows.h>
 typedef DWORD (*threadFunc) (LPVOID param);
 #define THREAD_FUNC_RET DWORD WINAPI
 #define THREAD_RET DWORD
 #define THREAD_PARAM LPVOID
-HANDLE sem;
-LPLONG semCount;
+#define SEM_TYPE HANDLE
+#define SEM_NAME LPCSTR
+#define SEM_VALUE LONG
 #elif __linux__ || __APPLE__
 #include <pthread.h>
 #include <semaphore.h>
@@ -21,8 +20,9 @@ typedef void* (*threadFunc) (void* param);
 #define THREAD_FUNC_RET void*
 #define THREAD_RET void*
 #define THREAD_PARAM void*
-sem_t *sem;
-int* semCount;
+#define SEM_TYPE sem_t*
+#define SEM_NAME const char*
+#define SEM_VALUE unsigned int
 #endif
 
 // meta: proto type for the compiled name of the user function so we have access to it in our program
@@ -39,16 +39,23 @@ typedef struct CSThread {
     THREAD_RET returnVal;
 } CSThread;
 
+// concurrency simulator semaphore
+typedef struct CSSem {
+    SEM_TYPE sem;
+    #if defined(_WIN32) // windows
+    SEM_VALUE count;
+    #elif defined(__APPLE__) || defined(__linux__)
+    SEM_VALUE count;
+    #endif
+} CSSem;
+
+//Thread functions
 CSThread* createThread(threadFunc func, void* arg);
-
 int joinThread(CSThread* thread);
-
 void freeCSThread(CSThread* thread);
 
-void createSemaphore();
-
-void semSignal();
-
-int semWait();
-
-void closeSemaphore();
+//Semaphore functions
+CSSem* semCreate(SEM_NAME name, SEM_VALUE maxValue);
+int semSignal(CSSem* sem);
+int semWait(CSSem* sem);
+int semClose(CSSem* sem);

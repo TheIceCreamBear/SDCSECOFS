@@ -48,12 +48,13 @@ void freeCSThread(CSThread* thread) {
     #endif
 }
 
-void createSemaphore()
+CSSem* semCreate(SEM_NAME name, SEM_VALUE maxValue)
 {
     #if defined(_WIN32) // windows
-    sem = CreateSemaphoreA(NULL, MAX_SEM, MAX_SEM, NULL);
-    semCount = (LPLONG)malloc(sizeof(LONG));
-    *semCount = MAX_SEM;
+    CSSem* sem = (CSSem*)malloc(sizeof(sem));
+    sem->sem = CreateSemaphoreA(NULL, maxValue, maxValue, name);
+    sem->count = (LPLONG)malloc(sizeof(LONG));
+    *sem->count = maxValue;
     #elif defined(__linux__) || defined(__APPLE__)
     sem = sem_open("main", O_CREAT | O_EXCL, 0644, MAX_SEM);
     sem_unlink("main");
@@ -65,29 +66,30 @@ void createSemaphore()
     semCount = (int*)malloc(sizeof(int));
     *semCount = MAX_SEM;
     #endif
-    return;
+    return sem;
 }
 
-void semSignal()
+//returns 1 if successful, else 0
+int semSignal(CSSem* sem)
 {
     #if defined(_WIN32) // windows
-    ReleaseSemaphore(sem, 1, semCount);
-    *semCount = *semCount + 1;
+    ReleaseSemaphore(sem->sem, 1, sem->count);
+    *sem->count = *sem->count + 1;
     #elif defined(__linux__) || defined(__APPLE__)
     sem_post(sem);
     *semCount = *semCount + 1;
     #endif
     
-    return;
+    return 1;
 }
 
 //returns 1 if available, else 0
-int semWait()
+int semWait(CSSem* sem)
 {
     #if defined(_WIN32) // windows
-    if(WaitForSingleObject(sem, 0) == WAIT_OBJECT_0)
+    if(WaitForSingleObject(sem->sem, 0) == WAIT_OBJECT_0)
     {
-        *semCount = *semCount - 1;
+        *sem->count = *sem->count - 1;
         return 1;
     }
     else
@@ -113,13 +115,15 @@ int semWait()
     return 0;
 }
 
-void closeSemaphore()
+//returns 1 if successful, else 0
+int semClose(CSSem* sem)
 {
     #if defined(_WIN32) // windows
-    CloseHandle(sem);
+    CloseHandle(sem->sem);
+    free(sem);
     #elif defined(__linux__) || defined(__APPLE__)
     sem_close(sem);
     #endif
 
-    return;
+    return 1;
 }

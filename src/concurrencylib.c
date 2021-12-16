@@ -1,17 +1,24 @@
 #include "concurrencylib.h"
 
-CSThread* createThread(threadFunc func, void* arg) {
+extern CSSem* vcThreadSem;
+extern CSThread* vcThreadList;
+
+CSThread* createThread(void** arg) {
     CSThread* thread = malloc(sizeof(CSThread));
+    thread->next = NULL;
     if (thread == NULL) {
         return NULL;
     }
+    semWait(vcThreadSem);
     #if defined(_WIN32) // windows
-    thread->thread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)func, arg, 0, &(thread->id));
+    thread->thread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)arg[0], arg[1], 0, &(thread->id));
     #elif defined(__APPLE__) || defined(__linux__)
     pthread_create(&thread->thread, NULL, func, arg);
-    
     #endif
-
+    vcThreadList->next = thread;
+    vcThreadList = thread;
+    semSignal(vcThreadSem);
+    free(arg);
     return thread;
 }
 

@@ -26,7 +26,7 @@ typedef void* (*threadFunc) (void* param);
 #endif
 
 // meta: proto type for the compiled name of the user function so we have access to it in our program
-int userMain(void);
+int userMain(void); 
 
 // concurrency simulator thread
 typedef struct CSThread {
@@ -37,6 +37,7 @@ typedef struct CSThread {
     pthread_t thread;
     #endif
     THREAD_RET returnVal;
+    struct CSThread* next;
 } CSThread;
 
 // concurrency simulator semaphore
@@ -46,7 +47,7 @@ typedef struct CSSem {
 } CSSem;
 
 //Thread functions
-CSThread* createThread(threadFunc func, void* arg);
+CSThread* createThread(void** arg);
 int joinThread(CSThread* thread);
 void freeCSThread(CSThread* thread);
 

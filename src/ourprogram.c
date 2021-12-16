@@ -12,7 +12,7 @@ THREAD_RET thing(THREAD_PARAM param) {
     void* ret;
     ret = param;
     #endif
-    for(i=0; i<5; i++)
+    for(i=0; i<3; i++)
     {
         if(semWait(sem))
         {
@@ -59,8 +59,8 @@ int main(int argc, char** argv) {
     //declare variables
     int i;
     void* param;
-    SEM_VALUE maxSem = 3;
-    int maxThread = 5;
+    SEM_VALUE maxSem = 2;
+    int maxThread = 3;
     CSThread* thread[maxThread];
 
     //create semaphore

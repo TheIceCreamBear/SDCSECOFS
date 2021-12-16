@@ -50,9 +50,18 @@ void freeCSThread(CSThread* thread) {
 
 CSSem* semCreate(SEM_NAME name, SEM_VALUE maxValue)
 {
+    if(name == NULL)
+    {
+        return NULL;
+    }
     CSSem* sem = (CSSem*)malloc(sizeof(sem));
     #if defined(_WIN32) // windows
     sem->sem = CreateSemaphoreA(NULL, maxValue, maxValue, name);
+    if(sem->sem == NULL || GetLastError() == ERROR_ALREADY_EXISTS)
+    {
+        free(sem);
+        return NULL;
+    }
     sem->count = maxValue;
     #elif defined(__linux__) || defined(__APPLE__)
     if(name == NULL)

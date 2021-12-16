@@ -10,7 +10,7 @@ typedef DWORD (*threadFunc) (LPVOID param);
 #define SEM_TYPE HANDLE
 #define SEM_NAME LPCSTR
 #define SEM_VALUE LONG
-#elif __linux__ || __APPLE__
+#elif __linux__ || __APPLE__ //Linux and MacOS
 #include <pthread.h>
 #include <semaphore.h>
 #include <errno.h>
@@ -42,11 +42,7 @@ typedef struct CSThread {
 // concurrency simulator semaphore
 typedef struct CSSem {
     SEM_TYPE sem;
-    #if defined(_WIN32) // windows
     SEM_VALUE count;
-    #elif defined(__APPLE__) || defined(__linux__)
-    SEM_VALUE count;
-    #endif
 } CSSem;
 
 //Thread functions

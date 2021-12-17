@@ -1,6 +1,6 @@
 #include "concurrencylib.h"
 
-CSSem* vcThreadSem;
+CSSem* vcThreadSem; //Blocks threads being created by vcCobegin, is released by waitforcompletion or waitforreturn
 CSThread* vcThreadList;
 CSThread* vcThreadListInitial;
 int numThreads;

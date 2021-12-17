@@ -80,3 +80,24 @@ void** vcWaitForReturn()
     freeCSThread(list);
     return arr;
 }
+
+vcSem* vcSemCreate(char* name, int count)
+{
+    vcSem* sem = semCreate(name, count);
+    return sem;
+}
+
+void vcSemWait(vcSem* sem)
+{
+    semWait(sem);
+}
+
+void vcSemSignal(vcSem* sem)
+{
+    semSignal(sem);
+}
+
+int vcValue(vcSem* sem)
+{
+    return sem->count;
+}

@@ -10,7 +10,7 @@ typedef DWORD (*threadFunc) (LPVOID param);
 #define SEM_TYPE HANDLE
 #define SEM_NAME LPCSTR
 #define SEM_VALUE LONG
-#elif __linux__ || __APPLE__
+#elif __linux__ || __APPLE__ //Linux and MacOS
 #include <pthread.h>
 #include <semaphore.h>
 #include <errno.h>
@@ -26,7 +26,7 @@ typedef void* (*threadFunc) (void* param);
 #endif
 
 // meta: proto type for the compiled name of the user function so we have access to it in our program
-int userMain(void);
+int userMain(void); 
 
 // concurrency simulator thread
 typedef struct CSThread {
@@ -37,20 +37,18 @@ typedef struct CSThread {
     pthread_t thread;
     #endif
     THREAD_RET returnVal;
+    struct CSThread* next;
 } CSThread;
 
 // concurrency simulator semaphore
 typedef struct CSSem {
     SEM_TYPE sem;
-    #if defined(_WIN32) // windows
     SEM_VALUE count;
-    #elif defined(__APPLE__) || defined(__linux__)
-    SEM_VALUE count;
-    #endif
+    struct CSSem* next;
 } CSSem;
 
 //Thread functions
-CSThread* createThread(threadFunc func, void* arg);
+CSThread* createThread(void** arg);
 int joinThread(CSThread* thread);
 void freeCSThread(CSThread* thread);
 

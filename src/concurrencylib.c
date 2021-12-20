@@ -1,17 +1,25 @@
 #include "concurrencylib.h"
 
-CSThread* createThread(threadFunc func, void* arg) {
+extern CSSem* vcThreadSem;
+extern CSSem* vcThreadSemInitial;
+extern CSThread* vcThreadList;
+
+CSThread* createThread(void** arg) {
     CSThread* thread = malloc(sizeof(CSThread));
+    thread->next = NULL;
     if (thread == NULL) {
         return NULL;
     }
+    semWait(vcThreadSemInitial);
     #if defined(_WIN32) // windows
-    thread->thread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)func, arg, 0, &(thread->id));
+    thread->thread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)arg[0], arg[1], 0, &(thread->id));
     #elif defined(__APPLE__) || defined(__linux__)
     pthread_create(&thread->thread, NULL, func, arg);
-    
     #endif
-
+    vcThreadList->next = thread;
+    vcThreadList = thread;
+    semSignal(vcThreadSemInitial);
+    free(arg);
     return thread;
 }
 
@@ -50,9 +58,19 @@ void freeCSThread(CSThread* thread) {
 
 CSSem* semCreate(SEM_NAME name, SEM_VALUE maxValue)
 {
-    CSSem* sem = (CSSem*)malloc(sizeof(sem));
+    if(name == NULL)
+    {
+        return NULL;
+    }
+    CSSem* sem = (CSSem*)malloc(sizeof(CSSem));
+    sem->next = NULL;
     #if defined(_WIN32) // windows
     sem->sem = CreateSemaphoreA(NULL, maxValue, maxValue, name);
+    if(sem->sem == NULL || GetLastError() == ERROR_ALREADY_EXISTS)
+    {
+        free(sem);
+        return NULL;
+    }
     sem->count = maxValue;
     #elif defined(__linux__) || defined(__APPLE__)
     if(name == NULL)
@@ -68,6 +86,11 @@ CSSem* semCreate(SEM_NAME name, SEM_VALUE maxValue)
     }
     sem->count = maxValue;
     #endif
+    if(vcThreadSem != NULL)
+    {
+        vcThreadSem->next = sem;
+        vcThreadSem = sem;
+    }
     return sem;
 }
 

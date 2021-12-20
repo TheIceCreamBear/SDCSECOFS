@@ -3,7 +3,7 @@ ifeq ($(OS),Windows_NT)
 run : compile
 	./bin/windows-threads-x86-64.exe
 compile :
-	gcc ./src/ourprogram.c ./src/concurrencylib.c ./src/userprogram.c -o ./bin/windows-threads-x86-64.exe
+	gcc ./src/ourprogram.c ./src/concurrencylib.c ./src/userprogram.c ./src/vcuserlibrary.c -o ./bin/windows-threads-x86-64.exe
 else ifeq ($(shell uname -s),Linux)
 run : compile
 	./bin/linux-threads-x86-64.exe

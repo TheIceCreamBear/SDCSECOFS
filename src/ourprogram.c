@@ -1,6 +1,7 @@
 #include "concurrencylib.h"
 
 CSSem* vcThreadSem; //Blocks threads being created by vcCobegin, is released by waitforcompletion or waitforreturn
+CSSem* vcThreadSemInitial;
 CSThread* vcThreadList;
 CSThread* vcThreadListInitial;
 int numThreads;
@@ -16,7 +17,9 @@ int main(int argc, char** argv) {
     vcThreadListInitial = vcThreadList;
 
     //Create thread creation semaphore
+    vcThreadSem = NULL;
     vcThreadSem = semCreate("/vcThreadSem", 1);
+    vcThreadSemInitial = vcThreadSem;
     semWait(vcThreadSem);
     
     printf("Program Start: %s\n", __func__);

@@ -1,6 +1,7 @@
 #include "concurrencylib.h"
 
 extern CSSem* vcThreadSem;
+extern CSSem* vcThreadSemInitial;
 extern CSThread* vcThreadList;
 
 CSThread* createThread(void** arg) {
@@ -9,7 +10,7 @@ CSThread* createThread(void** arg) {
     if (thread == NULL) {
         return NULL;
     }
-    semWait(vcThreadSem);
+    semWait(vcThreadSemInitial);
     #if defined(_WIN32) // windows
     thread->thread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)arg[0], arg[1], 0, &(thread->id));
     #elif defined(__APPLE__) || defined(__linux__)
@@ -17,7 +18,7 @@ CSThread* createThread(void** arg) {
     #endif
     vcThreadList->next = thread;
     vcThreadList = thread;
-    semSignal(vcThreadSem);
+    semSignal(vcThreadSemInitial);
     free(arg);
     return thread;
 }
@@ -61,7 +62,8 @@ CSSem* semCreate(SEM_NAME name, SEM_VALUE maxValue)
     {
         return NULL;
     }
-    CSSem* sem = (CSSem*)malloc(sizeof(sem));
+    CSSem* sem = (CSSem*)malloc(sizeof(CSSem));
+    sem->next = NULL;
     #if defined(_WIN32) // windows
     sem->sem = CreateSemaphoreA(NULL, maxValue, maxValue, name);
     if(sem->sem == NULL || GetLastError() == ERROR_ALREADY_EXISTS)
@@ -84,6 +86,11 @@ CSSem* semCreate(SEM_NAME name, SEM_VALUE maxValue)
     }
     sem->count = maxValue;
     #endif
+    if(vcThreadSem != NULL)
+    {
+        vcThreadSem->next = sem;
+        vcThreadSem = sem;
+    }
     return sem;
 }
 

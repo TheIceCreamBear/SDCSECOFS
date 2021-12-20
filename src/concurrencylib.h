@@ -44,6 +44,7 @@ typedef struct CSThread {
 typedef struct CSSem {
     SEM_TYPE sem;
     SEM_VALUE count;
+    struct CSSem* next;
 } CSSem;
 
 //Thread functions

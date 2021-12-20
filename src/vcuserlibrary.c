@@ -1,6 +1,7 @@
 #include "vcuserlibrary.h"
 
 extern CSSem* vcThreadSem;
+extern CSSem* vcThreadSemInitial;
 extern CSThread* vcThreadListInitial;
 extern int numThreads;
 
@@ -27,7 +28,7 @@ void vcWaitForCompletion()
     int numThreadIter = numThreads;
     CSThread* list = vcThreadListInitial;
     CSThread* tempList;
-    semSignal(vcThreadSem);
+    semSignal(vcThreadSemInitial);
     while(list->next == NULL){;}
     tempList = list->next;
     freeCSThread(list);
@@ -44,6 +45,12 @@ void vcWaitForCompletion()
     }
     joinThread(list);
     freeCSThread(list);
+    while(vcThreadSemInitial != NULL)
+    {
+        vcThreadSem = vcThreadSemInitial->next;
+        semClose(vcThreadSemInitial);
+        vcThreadSemInitial = vcThreadSem;
+    }
     return;
 }
 
@@ -58,7 +65,7 @@ void** vcWaitForReturn()
     int numThreadIter = numThreads;
     CSThread* list = vcThreadListInitial;
     CSThread* tempList;
-    semSignal(vcThreadSem);
+    semSignal(vcThreadSemInitial);
     while(list->next == NULL){;}
     tempList = list->next;
     freeCSThread(list);
@@ -78,6 +85,12 @@ void** vcWaitForReturn()
     joinThread(list);
     arr[i] = (void*)list->returnVal;
     freeCSThread(list);
+    while(vcThreadSemInitial != NULL)
+    {
+        vcThreadSem = vcThreadSemInitial->next;
+        semClose(vcThreadSemInitial);
+        vcThreadSemInitial = vcThreadSem;
+    }
     return arr;
 }
 

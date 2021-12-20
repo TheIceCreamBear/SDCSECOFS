@@ -17,7 +17,7 @@ int main(int argc, char** argv) {
 
     //Create thread creation semaphore
     vcThreadSem = semCreate("/vcThreadSem", 1);
-    semSignal(vcThreadSem);
+    semWait(vcThreadSem);
     
     printf("Program Start: %s\n", __func__);
     printf("Calling userMain...\n\n");

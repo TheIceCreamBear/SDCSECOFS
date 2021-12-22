@@ -121,6 +121,37 @@ int semSignal(CSSem* sem)
 int semWait(CSSem* sem)
 {
     #if defined(_WIN32) // windows
+    if(WaitForSingleObject(sem->sem, INFINITE) == WAIT_OBJECT_0)
+    {
+        sem->count = sem->count - 1;
+        return 1;
+    }
+    else
+    {
+        return 0;
+    }
+    printf("decrementSemaphore error %d. Exiting...\n", GetLastError());
+    exit(0);
+    #elif defined(__linux__) || defined(__APPLE__)
+    if(!sem_wait(sem->sem))
+    {
+        sem->count = sem->count - 1;
+        return 1;
+    }
+    else
+    {
+        return 0;
+    }
+    printf("decrementSemaphore error %d. Exiting...\n", errno);
+    exit(0);
+    #endif
+    
+    return 0;
+}
+
+int semTryWait(CSSem* sem)
+{
+    #if defined(_WIN32) // windows
     if(WaitForSingleObject(sem->sem, 0) == WAIT_OBJECT_0)
     {
         sem->count = sem->count - 1;
@@ -147,6 +178,11 @@ int semWait(CSSem* sem)
     #endif
     
     return 0;
+}
+
+int semValue(CSSem* sem)
+{
+    return sem->count;
 }
 
 //returns 1 if successful, else 0

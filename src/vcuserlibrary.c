@@ -101,6 +101,11 @@ void vcSemWait(vcSem* sem)
     semWait(sem);
 }
 
+void vcSemTryWait(vcSem* sem)
+{
+    semTryWait(sem);
+}
+
 void vcSemSignal(vcSem* sem)
 {
     semSignal(sem);
@@ -108,5 +113,5 @@ void vcSemSignal(vcSem* sem)
 
 int vcValue(vcSem* sem)
 {
-    return sem->count;
+    return semValue(sem);
 }

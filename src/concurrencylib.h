@@ -57,4 +57,6 @@ void freeCSThread(CSThread* thread);
 CSSem* semCreate(SEM_NAME name, SEM_VALUE maxValue);
 int semSignal(CSSem* sem);
 int semWait(CSSem* sem);
+int semTryWait(CSSem* sem);
+int semValue(CSSem* sem);
 int semClose(CSSem* sem);

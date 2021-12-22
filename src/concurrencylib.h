@@ -1,7 +1,8 @@
+//universal libraries
 #include <stdio.h>
 #include <stdlib.h>
 
-#ifdef _WIN32 // windows
+#ifdef _WIN32 // window's libraries and definitions
 #include <windows.h>
 typedef DWORD (*threadFunc) (LPVOID param);
 #define THREAD_FUNC_RET DWORD WINAPI
@@ -10,7 +11,7 @@ typedef DWORD (*threadFunc) (LPVOID param);
 #define SEM_TYPE HANDLE
 #define SEM_NAME LPCSTR
 #define SEM_VALUE LONG
-#elif __linux__ || __APPLE__ //Linux and MacOS
+#elif __linux__ || __APPLE__ //Linux and MacOS's libraries and definitions
 #include <pthread.h>
 #include <semaphore.h>
 #include <errno.h>
@@ -28,7 +29,7 @@ typedef void* (*threadFunc) (void* param);
 // meta: proto type for the compiled name of the user function so we have access to it in our program
 int userMain(void); 
 
-// concurrency simulator thread
+// concurrency simulator threading structure
 typedef struct CSThread {
     #if defined(_WIN32) // windows
     HANDLE thread;
@@ -40,7 +41,7 @@ typedef struct CSThread {
     struct CSThread* next;
 } CSThread;
 
-// concurrency simulator semaphore
+// concurrency simulator semaphore structure
 typedef struct CSSem {
     SEM_TYPE sem;
     SEM_VALUE count;

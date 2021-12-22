@@ -1,9 +1,11 @@
 #include "concurrencylib.h"
 
+//Global variables from ourprogram.c
 extern CSSem* vcThreadSem;
 extern CSSem* vcThreadSemInitial;
 extern CSThread* vcThreadList;
 
+//Create a thread instance of the createThread function
 void cobeginThread(void** arg)
 {
     #if defined(_WIN32) // windows
@@ -13,6 +15,8 @@ void cobeginThread(void** arg)
     #endif
 }
 
+//Create a CSThread that does not start until WaitForCompletion or WaitForReturn is called
+//arg parameter must have funcion at head of array
 CSThread* createThread(void** arg) {
     CSThread* thread = malloc(sizeof(CSThread));
     thread->next = NULL;
@@ -31,7 +35,7 @@ CSThread* createThread(void** arg) {
     free(arg);
     return thread;
 }
-
+ //Waits for thread to complete before being joined back into main function
 int joinThread(CSThread* thread) {
     #if defined(_WIN32) // windows
     WaitForSingleObject(thread->thread, INFINITE);
@@ -51,6 +55,7 @@ int joinThread(CSThread* thread) {
     return 1;
 }
 
+//Frees all data associated with a CSThread type, including itself
 void freeCSThread(CSThread* thread) {
     // make sure it is joined
     // TODO
@@ -65,6 +70,7 @@ void freeCSThread(CSThread* thread) {
     #endif
 }
 
+//Create a CSSem
 CSSem* semCreate(SEM_NAME name, SEM_VALUE maxValue)
 {
     if(name == NULL)
@@ -103,6 +109,7 @@ CSSem* semCreate(SEM_NAME name, SEM_VALUE maxValue)
     return sem;
 }
 
+//Releases 1 permit from semaphore and increment its count
 //returns 1 if successful, else 0
 int semSignal(CSSem* sem)
 {
@@ -117,6 +124,7 @@ int semSignal(CSSem* sem)
     return 1;
 }
 
+//Waits for semaphore to become available, attaining 1 permit from semaphore and decrementing its count
 //returns 1 if available, else 0
 int semWait(CSSem* sem)
 {
@@ -149,6 +157,9 @@ int semWait(CSSem* sem)
     return 0;
 }
 
+//Try to attain 1 permit from semaphore and decrement its count
+//Returns immediately if semaphore has no remaining permits at time of call
+//returns 1 if available, else 0
 int semTryWait(CSSem* sem)
 {
     #if defined(_WIN32) // windows
@@ -180,11 +191,13 @@ int semTryWait(CSSem* sem)
     return 0;
 }
 
+//Returns semaphore's current value
 int semValue(CSSem* sem)
 {
     return sem->count;
 }
 
+//Frees all data associated with a CSSem type, including itself
 //returns 1 if successful, else 0
 int semClose(CSSem* sem)
 {

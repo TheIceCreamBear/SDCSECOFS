@@ -1,27 +1,30 @@
 #include "vcuserlibrary.h"
 
+//Global variables from ourprogram.c
 extern CSSem* vcThreadSem;
 extern CSSem* vcThreadSemInitial;
 extern CSThread* vcThreadListInitial;
-extern int numThreads;
 
+//Create a thread instance with arguments
+//Threads do not begin until vcWaitForCompletion or vcWaitForReturn is called
 void vcCobegin(threadFunc func, void* arg)
 {
     void** arr = malloc(sizeof(void*)*2);
     arr[0] = func;
     arr[1] = arg;
     cobeginThread(arr);
-    numThreads++;
+    vcThreadListInitial->returnVal = vcThreadListInitial->returnVal + 1;
     return;
 }
 
+//Start all threads created by vcCobegin
 void vcWaitForCompletion()
 {
-    if(numThreads == 0)
+    if(vcThreadListInitial->returnVal == 0)
     {
         return;
     }
-    int numThreadIter = numThreads;
+    int numThreadIter = vcThreadListInitial->returnVal;
     CSThread* list = vcThreadListInitial;
     CSThread* tempList;
     semSignal(vcThreadSemInitial);
@@ -50,15 +53,17 @@ void vcWaitForCompletion()
     return;
 }
 
+//Start all threads created by vcCobegin and return their results
+//Results are stored in a void double pointer
 void** vcWaitForReturn()
 {
-    if(numThreads == 0)
+    if(vcThreadListInitial->returnVal == 0)
     {
         return NULL;
     }
-    void** arr = malloc(sizeof(void*)*numThreads);
+    void** arr = malloc(sizeof(void*)*((int)vcThreadListInitial->returnVal));
     int i = 0;
-    int numThreadIter = numThreads;
+    int numThreadIter = vcThreadListInitial->returnVal;
     CSThread* list = vcThreadListInitial;
     CSThread* tempList;
     semSignal(vcThreadSemInitial);
@@ -90,27 +95,33 @@ void** vcWaitForReturn()
     return arr;
 }
 
+//Create a semaphore with a name and maximum permit count
+//All semaphores must have a name, and values must be an integer greater than zero
 vcSem* vcSemCreate(char* name, int count)
 {
     vcSem* sem = semCreate(name, count);
     return sem;
 }
 
+//Consume one permit from a semaphore, or wait until one is available.
 void vcSemWait(vcSem* sem)
 {
     semWait(sem);
 }
 
+//Consume one permit from a sempahore, or return immediately if none are available
 void vcSemTryWait(vcSem* sem)
 {
     semTryWait(sem);
 }
 
+//Release one permit from a semaphore
 void vcSemSignal(vcSem* sem)
 {
     semSignal(sem);
 }
 
+//Return the current number of permits from semaphore
 int vcValue(vcSem* sem)
 {
     return semValue(sem);

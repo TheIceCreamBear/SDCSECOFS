@@ -48,6 +48,7 @@ typedef struct CSSem {
 } CSSem;
 
 //Thread functions
+void cobeginThread(void** arg);
 CSThread* createThread(void** arg);
 int joinThread(CSThread* thread);
 void freeCSThread(CSThread* thread);

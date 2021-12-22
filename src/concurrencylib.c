@@ -4,6 +4,15 @@ extern CSSem* vcThreadSem;
 extern CSSem* vcThreadSemInitial;
 extern CSThread* vcThreadList;
 
+void cobeginThread(void** arg)
+{
+    #if defined(_WIN32) // windows
+    CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)createThread, arg, 0, NULL);
+    #elif defined(__APPLE__) || defined(__linux__)
+    pthread_create(NULL, NULL, func, arg);
+    #endif
+}
+
 CSThread* createThread(void** arg) {
     CSThread* thread = malloc(sizeof(CSThread));
     thread->next = NULL;

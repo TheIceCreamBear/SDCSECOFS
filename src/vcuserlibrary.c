@@ -10,11 +10,7 @@ void vcCobegin(threadFunc func, void* arg)
     void** arr = malloc(sizeof(void*)*2);
     arr[0] = func;
     arr[1] = arg;
-    #if defined(_WIN32) // windows
-    CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)createThread, arr, 0, NULL);
-    #elif defined(__APPLE__) || defined(__linux__)
-    pthread_create(NULL, NULL, func, arg);
-    #endif
+    cobeginThread(arr);
     numThreads++;
     return;
 }

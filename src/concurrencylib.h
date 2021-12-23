@@ -49,10 +49,11 @@ typedef struct CSSem {
 } CSSem;
 
 //Thread functions
-void cobeginThread(void** arg);
-CSThread* createThread(void** arg);
+CSThread* cobeginThread(void* arg);
+THREAD_RET createThread(void* arg);
 int joinThread(CSThread* thread);
 void freeCSThread(CSThread* thread);
+void sleepThread(int milliseconds);
 
 //Semaphore functions
 CSSem* semCreate(SEM_NAME name, SEM_VALUE maxValue);

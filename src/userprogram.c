@@ -20,7 +20,7 @@ THREAD_RET Phil1(THREAD_PARAM param)
         vcSemSignal(fork1);
         vcSemSignal(room);
     }
-    DWORD ret = ((char*)param)[0];
+    THREAD_RET ret = ((char*)param)[0];
     return ret;
 }
 
@@ -37,7 +37,7 @@ THREAD_RET Phil2(THREAD_PARAM param)
         vcSemSignal(fork2);
         vcSemSignal(room);
     }
-    DWORD ret = ((char*)param)[0];
+    THREAD_RET ret = ((char*)param)[0];
     return ret;
 }
 
@@ -54,7 +54,7 @@ THREAD_RET Phil3(THREAD_PARAM param)
         vcSemSignal(fork3);
         vcSemSignal(room);
     }
-    DWORD ret = ((char*)param)[0];
+    THREAD_RET ret = ((char*)param)[0];
     return ret;
 }
 
@@ -71,7 +71,7 @@ THREAD_RET Phil4(THREAD_PARAM param)
         vcSemSignal(fork4);
         vcSemSignal(room);
     }
-    DWORD ret = ((char*)param)[0];
+    THREAD_RET ret = ((char*)param)[0];
     return ret;
 }
 
@@ -88,13 +88,12 @@ THREAD_RET Phil5(THREAD_PARAM param)
         vcSemSignal(fork5);
         vcSemSignal(room);
     }
-    DWORD ret = ((char*)param)[0];
+    THREAD_RET ret = ((char*)param)[0];
     return ret;
 }
 
 // meta: the type of this function can be up to us, weather or not it returns an int or nothing. It's name will be overwritten by useroverwrite.h
 int main(void) {
-    void** arr;
     fork1 = vcSemCreate("fork1", 1);
     fork2 = vcSemCreate("fork2", 1);
     fork3 = vcSemCreate("fork3", 1);
@@ -106,7 +105,8 @@ int main(void) {
     vcCobegin(Phil3, (void*)"a");
     vcCobegin(Phil4, (void*)"concurrency");
     vcCobegin(Phil5, (void*)"test");
-    arr = vcWaitForReturn();
+    void* ret = vcWaitForReturn();
+    void** arr = (void**)ret;
     int i;
     for(i = 0; i < 5; i++)
     {

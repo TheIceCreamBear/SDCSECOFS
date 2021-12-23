@@ -3,7 +3,12 @@
 //Global variables from ourprogram.c
 extern CSSem* vcThreadSem;
 extern CSSem* vcThreadSemInitial;
+extern CSThread* vcThreadList;
 extern CSThread* vcThreadListInitial;
+
+//Thread list of threads used to create threads
+CSThread* vcThreadCobeginList = NULL;
+CSThread* vcThreadCobeginListInitial = NULL;
 
 //Create a thread instance with arguments
 //Threads do not begin until vcWaitForCompletion or vcWaitForReturn is called
@@ -12,87 +17,115 @@ void vcCobegin(threadFunc func, void* arg)
     void** arr = malloc(sizeof(void*)*2);
     arr[0] = func;
     arr[1] = arg;
-    cobeginThread(arr);
-    vcThreadListInitial->returnVal = vcThreadListInitial->returnVal + 1;
+    void* data = arr;
+    CSThread* thread = cobeginThread(data);
+    if(vcThreadCobeginList == NULL)
+    {
+        vcThreadCobeginList = thread;
+        vcThreadCobeginListInitial = thread;
+    }
+    else
+    {
+        vcThreadCobeginList->next = thread;
+        vcThreadCobeginList = thread;
+    }
     return;
 }
 
 //Start all threads created by vcCobegin
 void vcWaitForCompletion()
 {
-    if(vcThreadListInitial->returnVal == 0)
+    if(vcThreadCobeginListInitial == NULL)
     {
         return;
     }
-    int numThreadIter = vcThreadListInitial->returnVal;
-    CSThread* list = vcThreadListInitial;
-    CSThread* tempList;
+    CSSem* tempSem;
+
+    //Release all thread creators and ensure they have all been joined and freed
     semSignal(vcThreadSemInitial);
-    while(list->next == NULL){;}
-    tempList = list->next;
-    freeCSThread(list);
-    list = tempList;
-    vcThreadListInitial = NULL;
-    while(numThreadIter > 1)
+    while(vcThreadCobeginListInitial != NULL)
     {
-        joinThread(list);
-        while(list->next == NULL){;}
-        tempList = list->next;
-        freeCSThread(list);
-        list = tempList;
-        numThreadIter--;
+        vcThreadCobeginList = vcThreadCobeginListInitial->next;
+        joinThread(vcThreadCobeginListInitial);
+        freeCSThread(vcThreadCobeginListInitial);
+        vcThreadCobeginListInitial = vcThreadCobeginList;
     }
-    joinThread(list);
-    freeCSThread(list);
-    while(vcThreadSemInitial != NULL)
+
+    //Begin to join and free all user threads
+    while(vcThreadListInitial != NULL)
     {
-        vcThreadSem = vcThreadSemInitial->next;
-        semClose(vcThreadSemInitial);
-        vcThreadSemInitial = vcThreadSem;
+        vcThreadList = vcThreadListInitial->next;
+        joinThread(vcThreadListInitial);
+        freeCSThread(vcThreadListInitial);
+        vcThreadListInitial = vcThreadList;
+    }
+
+    //Reset semList head and begin to free all user semaphores
+    vcThreadSem = vcThreadSemInitial->next;
+    semWait(vcThreadSemInitial);
+    vcThreadSemInitial->next = NULL;
+    while(vcThreadSem != NULL)
+    {
+        tempSem = vcThreadSem->next;
+        semClose(vcThreadSem);
+        vcThreadSem = tempSem;
     }
     return;
 }
 
 //Start all threads created by vcCobegin and return their results
 //Results are stored in a void double pointer
-void** vcWaitForReturn()
+void* vcWaitForReturn()
 {
-    if(vcThreadListInitial->returnVal == 0)
+    if(vcThreadCobeginListInitial == NULL)
     {
         return NULL;
     }
-    void** arr = malloc(sizeof(void*)*((int)vcThreadListInitial->returnVal));
     int i = 0;
-    int numThreadIter = vcThreadListInitial->returnVal;
-    CSThread* list = vcThreadListInitial;
-    CSThread* tempList;
-    semSignal(vcThreadSemInitial);
-    while(list->next == NULL){;}
-    tempList = list->next;
-    freeCSThread(list);
-    list = tempList;
-    vcThreadListInitial = NULL;
-    while(numThreadIter > 1)
+    CSSem* tempSem;
+
+    //Get number of user created threads and create array for return values
+    vcThreadCobeginList = vcThreadCobeginListInitial;
+    while(vcThreadCobeginList != NULL)
     {
-        joinThread(list);
-        arr[i] = (void*)list->returnVal;
         i++;
-        while(list->next == NULL){;}
-        tempList = list->next;
-        freeCSThread(list);
-        list = tempList;
-        numThreadIter--;
+        vcThreadCobeginList = vcThreadCobeginList->next;
     }
-    joinThread(list);
-    arr[i] = (void*)list->returnVal;
-    freeCSThread(list);
-    while(vcThreadSemInitial != NULL)
+    void** arr = malloc(sizeof(void*)*i);
+    i = 0;
+
+    //Release all thread creators and ensure they have all been joined and freed
+    semSignal(vcThreadSemInitial);
+    while(vcThreadCobeginListInitial != NULL)
     {
-        vcThreadSem = vcThreadSemInitial->next;
-        semClose(vcThreadSemInitial);
-        vcThreadSemInitial = vcThreadSem;
+        vcThreadCobeginList = vcThreadCobeginListInitial->next;
+        joinThread(vcThreadCobeginListInitial);
+        freeCSThread(vcThreadCobeginListInitial);
+        vcThreadCobeginListInitial = vcThreadCobeginList;
     }
-    return arr;
+
+    //Begin to join and free all user threads, as well as populate return array
+    while(vcThreadListInitial != NULL)
+    {
+        vcThreadList = vcThreadListInitial->next;
+        joinThread(vcThreadListInitial);
+        arr[i++] = (void*)vcThreadListInitial->returnVal;
+        freeCSThread(vcThreadListInitial);
+        vcThreadListInitial = vcThreadList;
+    }
+
+    //Reset semList head and begin to free all user semaphores
+    vcThreadSem = vcThreadSemInitial->next;
+    semWait(vcThreadSemInitial);
+    vcThreadSemInitial->next = NULL;
+    while(vcThreadSem != NULL)
+    {
+        tempSem = vcThreadSem->next;
+        semClose(vcThreadSem);
+        vcThreadSem = tempSem;
+    }
+
+    return (void*)arr;
 }
 
 //Create a semaphore with a name and maximum permit count
@@ -114,7 +147,6 @@ void vcSemWait(vcSem* sem)
 void vcSemTryWait(vcSem* sem)
 {
     semTryWait(sem);
-    sleepThread(25);
 }
 
 //Release one permit from a semaphore

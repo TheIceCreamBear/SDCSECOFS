@@ -5,7 +5,7 @@
 //Thread functions
 void vcCobegin(threadFunc func, void* arg);
 void vcWaitForCompletion();
-void** vcWaitForReturn();
+void* vcWaitForReturn();
 
 //Semaphore functions
 vcSem* vcSemCreate(char* name, int count);

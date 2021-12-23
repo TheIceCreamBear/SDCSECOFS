@@ -4,36 +4,48 @@
 extern CSSem* vcThreadSem;
 extern CSSem* vcThreadSemInitial;
 extern CSThread* vcThreadList;
+extern CSThread* vcThreadListInitial;
 
 //Create a thread instance of the createThread function
-void cobeginThread(void** arg)
+CSThread* cobeginThread(void* arg)
 {
+    CSThread* thread = malloc(sizeof(CSThread));
+    thread->next = NULL;
     #if defined(_WIN32) // windows
-    CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)createThread, arg, 0, NULL);
+    thread->thread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)createThread, arg, 0, &(thread->id));
     #elif defined(__APPLE__) || defined(__linux__)
-    pthread_create(NULL, NULL, func, arg);
+    pthread_create(&thread->thread, NULL, createThread, arg);
     #endif
+    return thread;
 }
 
 //Create a CSThread that does not start until WaitForCompletion or WaitForReturn is called
 //arg parameter must have funcion at head of array
-CSThread* createThread(void** arg) {
+THREAD_RET createThread(void* arg) {
     CSThread* thread = malloc(sizeof(CSThread));
     thread->next = NULL;
     if (thread == NULL) {
-        return NULL;
+        return -1;
     }
+    void** arr = (void**)arg;
     semWait(vcThreadSemInitial);
     #if defined(_WIN32) // windows
-    thread->thread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)arg[0], arg[1], 0, &(thread->id));
+    thread->thread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)arr[0], arr[1], 0, &(thread->id));
     #elif defined(__APPLE__) || defined(__linux__)
-    pthread_create(&thread->thread, NULL, func, arg);
+    pthread_create(&thread->thread, NULL, arr[0], arr[1]);
     #endif
-    vcThreadList->next = thread;
-    vcThreadList = thread;
+    if(vcThreadListInitial == NULL)
+    {
+        vcThreadList = thread;
+        vcThreadListInitial = thread;
+    }
+    else
+    {
+        vcThreadList->next = thread;
+        vcThreadList = thread;
+    }
     semSignal(vcThreadSemInitial);
     free(arg);
-    return thread;
 }
  //Waits for thread to complete before being joined back into main function
 int joinThread(CSThread* thread) {
@@ -76,7 +88,7 @@ void sleepThread(int milliseconds)
     #ifdef _WIN32
     Sleep(milliseconds);
     #else
-    sleep(milliseconds);
+    sleep(1);
     #endif
 }
 
@@ -98,12 +110,8 @@ CSSem* semCreate(SEM_NAME name, SEM_VALUE maxValue)
     }
     sem->count = maxValue;
     #elif defined(__linux__) || defined(__APPLE__)
-    if(name == NULL)
-    {
-        name = "NULL";
-    }
     sem->sem = sem_open(name, O_CREAT | O_EXCL, 0644, maxValue);
-    sem_unlink("main");
+    sem_unlink(name);
     if(sem->sem == SEM_FAILED)
     {
         printf("createSemaphore error: %d. Exiting...\n", errno);

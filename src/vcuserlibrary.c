@@ -107,18 +107,21 @@ vcSem* vcSemCreate(char* name, int count)
 void vcSemWait(vcSem* sem)
 {
     semWait(sem);
+    sleepThread(25);
 }
 
 //Consume one permit from a sempahore, or return immediately if none are available
 void vcSemTryWait(vcSem* sem)
 {
     semTryWait(sem);
+    sleepThread(25);
 }
 
 //Release one permit from a semaphore
 void vcSemSignal(vcSem* sem)
 {
     semSignal(sem);
+    sleepThread(25);
 }
 
 //Return the current number of permits from semaphore

@@ -53,6 +53,7 @@ void cobeginThread(void** arg);
 CSThread* createThread(void** arg);
 int joinThread(CSThread* thread);
 void freeCSThread(CSThread* thread);
+void sleepThread(int milliseconds);
 
 //Semaphore functions
 CSSem* semCreate(SEM_NAME name, SEM_VALUE maxValue);

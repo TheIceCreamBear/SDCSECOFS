@@ -16,7 +16,6 @@ THREAD_RET Phil1(THREAD_PARAM param)
         vcSemWait(fork1);
         vcSemWait(fork2);
         printf("P1 is eating: loop %d\n", i);
-        Sleep(100);
         vcSemSignal(fork2);
         vcSemSignal(fork1);
         vcSemSignal(room);
@@ -34,7 +33,6 @@ THREAD_RET Phil2(THREAD_PARAM param)
         vcSemWait(fork2);
         vcSemWait(fork3);
         printf("P2 is eating: loop %d\n", i);
-        Sleep(100);
         vcSemSignal(fork3);
         vcSemSignal(fork2);
         vcSemSignal(room);
@@ -52,7 +50,6 @@ THREAD_RET Phil3(THREAD_PARAM param)
         vcSemWait(fork3);
         vcSemWait(fork4);
         printf("P3 is eating: loop %d\n", i);
-        Sleep(100);
         vcSemSignal(fork4);
         vcSemSignal(fork3);
         vcSemSignal(room);
@@ -70,7 +67,6 @@ THREAD_RET Phil4(THREAD_PARAM param)
         vcSemWait(fork4);
         vcSemWait(fork5);
         printf("P4 is eating: loop %d\n", i);
-        Sleep(100);
         vcSemSignal(fork5);
         vcSemSignal(fork4);
         vcSemSignal(room);
@@ -88,7 +84,6 @@ THREAD_RET Phil5(THREAD_PARAM param)
         vcSemWait(fork5);
         vcSemWait(fork1);
         printf("P5 is eating: loop %d\n", i);
-        Sleep(100);
         vcSemSignal(fork1);
         vcSemSignal(fork5);
         vcSemSignal(room);

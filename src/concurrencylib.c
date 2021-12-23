@@ -70,6 +70,16 @@ void freeCSThread(CSThread* thread) {
     #endif
 }
 
+//Puts the current thread to sleep for specified amount of time in milliseconds
+void sleepThread(int milliseconds)
+{
+    #ifdef _WIN32
+    Sleep(milliseconds);
+    #else
+    sleep(milliseconds);
+    #endif
+}
+
 //Create a CSSem
 CSSem* semCreate(SEM_NAME name, SEM_VALUE maxValue)
 {
@@ -120,7 +130,6 @@ int semSignal(CSSem* sem)
     sem_post(sem->sem);
     sem->count = sem->count + 1;
     #endif
-    
     return 1;
 }
 
@@ -153,7 +162,6 @@ int semWait(CSSem* sem)
     printf("decrementSemaphore error %d. Exiting...\n", errno);
     exit(0);
     #endif
-    
     return 0;
 }
 
@@ -187,7 +195,6 @@ int semTryWait(CSSem* sem)
     printf("decrementSemaphore error %d. Exiting...\n", errno);
     exit(0);
     #endif
-    
     return 0;
 }
 

@@ -25,7 +25,7 @@ THREAD_RET createThread(void* arg) {
     CSThread* thread = malloc(sizeof(CSThread));
     thread->next = NULL;
     if (thread == NULL) {
-        return -1;
+        return (THREAD_RET)-1;
     }
     void** arr = (void**)arg;
     semWait(vcThreadSemInitial);
@@ -71,13 +71,11 @@ int joinThread(CSThread* thread) {
 void freeCSThread(CSThread* thread) {
     // make sure it is joined
     // TODO
-
     // free struct
     #ifdef _WIN32
     CloseHandle(thread->thread);
     free(thread);
     #else
-    free(thread->returnVal);
     free(thread);
     #endif
 }
@@ -88,7 +86,7 @@ void sleepThread(int milliseconds)
     #ifdef _WIN32
     Sleep(milliseconds);
     #else
-    sleep(1);
+    usleep(milliseconds*1000);
     #endif
 }
 

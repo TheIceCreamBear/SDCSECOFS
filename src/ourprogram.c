@@ -1,10 +1,9 @@
 #include "concurrencylib.h"
 
-CSSem* vcThreadSem; //Blocks threads being created by vcCobegin, is released by waitforcompletion or waitforreturn
-CSSem* vcThreadSemInitial;
-CSThread* vcThreadList;
-CSThread* vcThreadListInitial;
-int numThreads;
+CSSem* vcThreadSem; //Linked list of all semaphores
+CSSem* vcThreadSemInitial; //First item blocks threads being created by vcCobegin, is released by waitforcompletion or waitforreturn
+CSThread* vcThreadList; //Linked list of all threads
+CSThread* vcThreadListInitial; //First item contains number of threads created by user in returnVal
 
 int main(int argc, char** argv) {
     // show overwriting of user program
@@ -14,6 +13,7 @@ int main(int argc, char** argv) {
     vcThreadList = (CSThread*)malloc(sizeof(CSThread));
     vcThreadList->thread = NULL;
     vcThreadList->next = NULL;
+    vcThreadList->returnVal = 0;
     vcThreadListInitial = vcThreadList;
 
     //Create thread creation semaphore

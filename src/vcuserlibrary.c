@@ -1,33 +1,38 @@
 #include "vcuserlibrary.h"
 
-//Global variables from ourprogram.c
-extern CSSem* vcThreadSem;
-extern CSSem* vcThreadSemInitial;
-extern CSThread* vcThreadList;
-extern CSThread* vcThreadListInitial;
-
 //Thread list of threads used to create threads
-CSThread* vcThreadCobeginList = NULL;
-CSThread* vcThreadCobeginListInitial = NULL;
+//Lists used to track user created threads and semaphores
+CSThread* vizconThreadList = NULL; //Linked list of all threads
+CSThread* vizconThreadListInitial = NULL;
+CSSem* vizconThreadSem = NULL; //Blocks threads being created by vcCobegin, is released by waitforcompletion or waitforreturn
+CSSem* vizconSemList = NULL; //Linked list of all semaphores
+CSSem* vizconSemListInitial = NULL;
+CSThread* vizconCobeginList = NULL;
+CSThread* vizconCobeginListInitial = NULL;
 
 //Create a thread instance with arguments
 //Threads do not begin until vcWaitForCompletion or vcWaitForReturn is called
 void vcCobegin(threadFunc func, void* arg)
 {
+    if(vizconThreadSem == NULL)
+    {
+        vizconThreadSem = semCreate("/vcThreadSem", 1);
+        semWait(vizconThreadSem);
+    }
     void** arr = malloc(sizeof(void*)*2);
     arr[0] = func;
     arr[1] = arg;
     void* data = arr;
     CSThread* thread = cobeginThread(data);
-    if(vcThreadCobeginList == NULL)
+    if(vizconCobeginList == NULL)
     {
-        vcThreadCobeginList = thread;
-        vcThreadCobeginListInitial = thread;
+        vizconCobeginList = thread;
+        vizconCobeginListInitial = thread;
     }
     else
     {
-        vcThreadCobeginList->next = thread;
-        vcThreadCobeginList = thread;
+        vizconCobeginList->next = thread;
+        vizconCobeginList = thread;
     }
     return;
 }
@@ -35,40 +40,37 @@ void vcCobegin(threadFunc func, void* arg)
 //Start all threads created by vcCobegin
 void vcWaitForCompletion()
 {
-    if(vcThreadCobeginListInitial == NULL)
+    if(vizconCobeginListInitial == NULL)
     {
         return;
     }
-    CSSem* tempSem;
 
     //Release all thread creators and ensure they have all been joined and freed
-    semSignal(vcThreadSemInitial);
-    while(vcThreadCobeginListInitial != NULL)
+    semSignal(vizconThreadSem);
+    while(vizconCobeginListInitial != NULL)
     {
-        vcThreadCobeginList = vcThreadCobeginListInitial->next;
-        joinThread(vcThreadCobeginListInitial);
-        freeCSThread(vcThreadCobeginListInitial);
-        vcThreadCobeginListInitial = vcThreadCobeginList;
+        vizconCobeginList = vizconCobeginListInitial->next;
+        joinThread(vizconCobeginListInitial);
+        freeCSThread(vizconCobeginListInitial);
+        vizconCobeginListInitial = vizconCobeginList;
     }
+    semWait(vizconThreadSem);
 
     //Begin to join and free all user threads
-    while(vcThreadListInitial != NULL)
+    while(vizconThreadListInitial != NULL)
     {
-        vcThreadList = vcThreadListInitial->next;
-        joinThread(vcThreadListInitial);
-        freeCSThread(vcThreadListInitial);
-        vcThreadListInitial = vcThreadList;
+        vizconThreadList = vizconThreadListInitial->next;
+        joinThread(vizconThreadListInitial);
+        freeCSThread(vizconThreadListInitial);
+        vizconThreadListInitial = vizconThreadList;
     }
 
-    //Reset semList head and begin to free all user semaphores
-    vcThreadSem = vcThreadSemInitial->next;
-    semWait(vcThreadSemInitial);
-    vcThreadSemInitial->next = NULL;
-    while(vcThreadSem != NULL)
+    //Free all user created semaphores
+    while(vizconSemList != NULL)
     {
-        tempSem = vcThreadSem->next;
-        semClose(vcThreadSem);
-        vcThreadSem = tempSem;
+        vizconSemList = vizconSemListInitial->next;
+        semClose(vizconSemListInitial);
+        vizconSemListInitial = vizconSemList;
     }
     return;
 }
@@ -77,7 +79,7 @@ void vcWaitForCompletion()
 //Results are stored in a void double pointer
 void* vcWaitForReturn()
 {
-    if(vcThreadCobeginListInitial == NULL)
+    if(vizconCobeginListInitial == NULL)
     {
         return NULL;
     }
@@ -85,46 +87,43 @@ void* vcWaitForReturn()
     CSSem* tempSem;
 
     //Get number of user created threads and create array for return values
-    vcThreadCobeginList = vcThreadCobeginListInitial;
-    while(vcThreadCobeginList != NULL)
+    vizconCobeginList = vizconCobeginListInitial;
+    while(vizconCobeginList != NULL)
     {
         i++;
-        vcThreadCobeginList = vcThreadCobeginList->next;
+        vizconCobeginList = vizconCobeginList->next;
     }
     void** arr = malloc(sizeof(void*)*i);
     i = 0;
 
     //Release all thread creators and ensure they have all been joined and freed
-    semSignal(vcThreadSemInitial);
-    while(vcThreadCobeginListInitial != NULL)
+    semSignal(vizconThreadSem);
+    while(vizconCobeginListInitial != NULL)
     {
-        vcThreadCobeginList = vcThreadCobeginListInitial->next;
-        joinThread(vcThreadCobeginListInitial);
-        freeCSThread(vcThreadCobeginListInitial);
-        vcThreadCobeginListInitial = vcThreadCobeginList;
+        vizconCobeginList = vizconCobeginListInitial->next;
+        joinThread(vizconCobeginListInitial);
+        freeCSThread(vizconCobeginListInitial);
+        vizconCobeginListInitial = vizconCobeginList;
     }
+    semWait(vizconThreadSem);
 
     //Begin to join and free all user threads, as well as populate return array
-    while(vcThreadListInitial != NULL)
+    while(vizconThreadListInitial != NULL)
     {
-        vcThreadList = vcThreadListInitial->next;
-        joinThread(vcThreadListInitial);
-        arr[i++] = (void*)vcThreadListInitial->returnVal;
-        freeCSThread(vcThreadListInitial);
-        vcThreadListInitial = vcThreadList;
+        vizconThreadList = vizconThreadListInitial->next;
+        joinThread(vizconThreadListInitial);
+        arr[i++] = (void*)vizconThreadListInitial->returnVal;
+        freeCSThread(vizconThreadListInitial);
+        vizconThreadListInitial = vizconThreadList;
     }
 
-    //Reset semList head and begin to free all user semaphores
-    vcThreadSem = vcThreadSemInitial->next;
-    semWait(vcThreadSemInitial);
-    vcThreadSemInitial->next = NULL;
-    while(vcThreadSem != NULL)
+    //Free all user created semaphores
+    while(vizconSemList != NULL)
     {
-        tempSem = vcThreadSem->next;
-        semClose(vcThreadSem);
-        vcThreadSem = tempSem;
+        vizconSemList = vizconSemListInitial->next;
+        semClose(vizconSemListInitial);
+        vizconSemListInitial = vizconSemList;
     }
-
     return (void*)arr;
 }
 
@@ -133,6 +132,16 @@ void* vcWaitForReturn()
 vcSem* vcSemCreate(char* name, int count)
 {
     vcSem* sem = semCreate(name, count);
+    if(vizconSemList == NULL)
+    {
+        vizconSemListInitial = sem;
+        vizconSemList = sem;
+    }
+    else
+    {
+        vizconSemList->next = sem;
+        vizconSemList = sem;
+    }
     return sem;
 }
 

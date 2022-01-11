@@ -1,3 +1,5 @@
+#ifndef CONCURRENCYLIB_H
+#define CONCURRENCYLIB_H
 //universal libraries
 #include <stdio.h>
 #include <stdlib.h>
@@ -62,3 +64,4 @@ int semWait(CSSem* sem);
 int semTryWait(CSSem* sem);
 int semValue(CSSem* sem);
 int semClose(CSSem* sem);
+#endif

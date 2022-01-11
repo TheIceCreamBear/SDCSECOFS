@@ -1,3 +1,5 @@
+#ifndef VCUSERLIBRARY_H
+#define VCUSERLIBRARY_H
 #include "concurrencylib.h"
 
 #define vcSem CSSem
@@ -13,3 +15,4 @@ void vcSemWait(vcSem* sem);
 void vcSemTryWait(vcSem* sem);
 void vcSemSignal(vcSem* sem);
 int vcValue(vcSem* sem);
+#endif

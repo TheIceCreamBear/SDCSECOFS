@@ -1,10 +1,8 @@
 #include "concurrencylib.h"
 
-//Global variables from ourprogram.c
-extern CSSem* vcThreadSem;
-extern CSSem* vcThreadSemInitial;
-extern CSThread* vcThreadList;
-extern CSThread* vcThreadListInitial;
+extern CSThread* vizconThreadList;
+extern CSThread* vizconThreadListInitial;
+extern CSSem* vizconThreadSem;
 
 //Create a thread instance of the createThread function
 CSThread* cobeginThread(void* arg)
@@ -28,23 +26,23 @@ THREAD_RET createThread(void* arg) {
         return (THREAD_RET)-1;
     }
     void** arr = (void**)arg;
-    semWait(vcThreadSemInitial);
+    semWait(vizconThreadSem);
     #if defined(_WIN32) // windows
     thread->thread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)arr[0], arr[1], 0, &(thread->id));
     #elif defined(__APPLE__) || defined(__linux__)
     pthread_create(&thread->thread, NULL, arr[0], arr[1]);
     #endif
-    if(vcThreadListInitial == NULL)
+    if(vizconThreadListInitial == NULL)
     {
-        vcThreadList = thread;
-        vcThreadListInitial = thread;
+        vizconThreadList = thread;
+        vizconThreadListInitial = thread;
     }
     else
     {
-        vcThreadList->next = thread;
-        vcThreadList = thread;
+        vizconThreadList->next = thread;
+        vizconThreadList = thread;
     }
-    semSignal(vcThreadSemInitial);
+    semSignal(vizconThreadSem);
     free(arg);
 }
  //Waits for thread to complete before being joined back into main function
@@ -117,11 +115,6 @@ CSSem* semCreate(SEM_NAME name, SEM_VALUE maxValue)
     }
     sem->count = maxValue;
     #endif
-    if(vcThreadSem != NULL)
-    {
-        vcThreadSem->next = sem;
-        vcThreadSem = sem;
-    }
     return sem;
 }
 

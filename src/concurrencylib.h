@@ -52,7 +52,7 @@ typedef struct CSSem {
 
 //Thread functions
 CSThread* cobeginThread(void* arg);
-THREAD_RET createThread(void* arg);
+CSThread* createThread(void* arg);
 int joinThread(CSThread* thread);
 void freeCSThread(CSThread* thread);
 void sleepThread(int milliseconds);

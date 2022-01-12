@@ -19,11 +19,11 @@ CSThread* cobeginThread(void* arg)
 
 //Create a CSThread that does not start until WaitForCompletion or WaitForReturn is called
 //arg parameter must have funcion at head of array
-THREAD_RET createThread(void* arg) {
+CSThread* createThread(void* arg) {
     CSThread* thread = malloc(sizeof(CSThread));
     thread->next = NULL;
     if (thread == NULL) {
-        return (THREAD_RET)-1;
+        return NULL;
     }
     void** arr = (void**)arg;
     semWait(vizconThreadSem);
@@ -44,6 +44,7 @@ THREAD_RET createThread(void* arg) {
     }
     semSignal(vizconThreadSem);
     free(arg);
+    return thread;
 }
  //Waits for thread to complete before being joined back into main function
 int joinThread(CSThread* thread) {

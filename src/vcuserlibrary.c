@@ -1,13 +1,12 @@
 #include "vcuserlibrary.h"
 
-//Thread list of threads used to create threads
-//Lists used to track user created threads and semaphores
+//Lists used to track all threads and semaphores
+CSSem* vizconThreadSem = NULL; //Blocks createthread threads, released by waitforcompletion/waitforreturn. Count used for number of threads created
 CSThread* vizconThreadList = NULL; //Linked list of all threads
 CSThread* vizconThreadListInitial = NULL;
-CSSem* vizconThreadSem = NULL; //Blocks threads being created by vcCobegin, is released by waitforcompletion or waitforreturn
 CSSem* vizconSemList = NULL; //Linked list of all semaphores
 CSSem* vizconSemListInitial = NULL;
-CSThread* vizconCobeginList = NULL;
+CSThread* vizconCobeginList = NULL; // List of all cobegin threads
 CSThread* vizconCobeginListInitial = NULL;
 
 //Create a thread instance with arguments
@@ -16,7 +15,7 @@ void vcCobegin(threadFunc func, void* arg)
 {
     if(vizconThreadSem == NULL)
     {
-        vizconThreadSem = semCreate("/vcThreadSem", 1);
+        vizconThreadSem = semCreate("/vizconThreadSem", 1);
         semWait(vizconThreadSem);
     }
     void** arr = malloc(sizeof(void*)*2);
@@ -34,6 +33,7 @@ void vcCobegin(threadFunc func, void* arg)
         vizconCobeginList->next = thread;
         vizconCobeginList = thread;
     }
+    vizconThreadSem->count = vizconThreadSem->count + 1;
     return;
 }
 
@@ -45,7 +45,8 @@ void vcWaitForCompletion()
         return;
     }
 
-    //Release all thread creators and ensure they have all been joined and freed
+    //Release all thread creators, ensure they have all been joined/freed, and reset vizconThreadSem
+    vizconThreadSem->count = 0;
     semSignal(vizconThreadSem);
     while(vizconCobeginListInitial != NULL)
     {
@@ -84,19 +85,10 @@ void* vcWaitForReturn()
         return NULL;
     }
     int i = 0;
-    CSSem* tempSem;
-
-    //Get number of user created threads and create array for return values
-    vizconCobeginList = vizconCobeginListInitial;
-    while(vizconCobeginList != NULL)
-    {
-        i++;
-        vizconCobeginList = vizconCobeginList->next;
-    }
-    void** arr = malloc(sizeof(void*)*i);
-    i = 0;
+    void** arr = malloc(sizeof(void*)*vizconThreadSem->count);
 
     //Release all thread creators and ensure they have all been joined and freed
+    vizconThreadSem->count = 0;
     semSignal(vizconThreadSem);
     while(vizconCobeginListInitial != NULL)
     {

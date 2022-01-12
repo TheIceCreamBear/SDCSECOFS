@@ -45,8 +45,7 @@ void vcWaitForCompletion()
         return;
     }
 
-    //Release all thread creators, ensure they have all been joined/freed, and reset vizconThreadSem
-    vizconThreadSem->count = 0;
+    //Release all thread creators and ensure they have all been joined and freed
     semSignal(vizconThreadSem);
     while(vizconCobeginListInitial != NULL)
     {
@@ -55,7 +54,6 @@ void vcWaitForCompletion()
         freeCSThread(vizconCobeginListInitial);
         vizconCobeginListInitial = vizconCobeginList;
     }
-    semWait(vizconThreadSem);
 
     //Begin to join and free all user threads
     while(vizconThreadListInitial != NULL)
@@ -66,13 +64,15 @@ void vcWaitForCompletion()
         vizconThreadListInitial = vizconThreadList;
     }
 
-    //Free all user created semaphores
+    //Free all semaphores
     while(vizconSemList != NULL)
     {
         vizconSemList = vizconSemListInitial->next;
         semClose(vizconSemListInitial);
         vizconSemListInitial = vizconSemList;
     }
+    semClose(vizconThreadSem);
+
     return;
 }
 
@@ -88,7 +88,6 @@ void* vcWaitForReturn()
     void** arr = malloc(sizeof(void*)*vizconThreadSem->count);
 
     //Release all thread creators and ensure they have all been joined and freed
-    vizconThreadSem->count = 0;
     semSignal(vizconThreadSem);
     while(vizconCobeginListInitial != NULL)
     {
@@ -97,7 +96,6 @@ void* vcWaitForReturn()
         freeCSThread(vizconCobeginListInitial);
         vizconCobeginListInitial = vizconCobeginList;
     }
-    semWait(vizconThreadSem);
 
     //Begin to join and free all user threads, as well as populate return array
     while(vizconThreadListInitial != NULL)
@@ -109,13 +107,15 @@ void* vcWaitForReturn()
         vizconThreadListInitial = vizconThreadList;
     }
 
-    //Free all user created semaphores
+    //Free all semaphores
     while(vizconSemList != NULL)
     {
         vizconSemList = vizconSemListInitial->next;
         semClose(vizconSemListInitial);
         vizconSemListInitial = vizconSemList;
     }
+    semClose(vizconThreadSem);
+
     return (void*)arr;
 }
 

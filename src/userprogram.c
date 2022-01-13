@@ -1,17 +1,15 @@
 // meta: the following 2 lines would not be in their source code, but appended by us before calling the compiler
 #include "useroverwrite.h"
-#include "vcuserlibrary.h"  
+#include "vcuserlibrary.h"
 
 #include <stdio.h>
 
 vcSem *fork1, *fork2, *fork3, *fork4, *fork5, *room;
 int m = 20;
-vcMutex *lol;
 
 THREAD_RET Phil1(THREAD_PARAM param)
 {
     int i;
-    vcMutexLock(lol);
     for(i=0; i<m; i++)
     {
         vcSemWait(room);
@@ -22,14 +20,12 @@ THREAD_RET Phil1(THREAD_PARAM param)
         vcSemSignal(fork1);
         vcSemSignal(room);
     }
-    vcMutexUnlock(lol);
     return (THREAD_RET)param;
 }
 
 THREAD_RET Phil2(THREAD_PARAM param)
 {
     int i;
-    vcMutexLock(lol);
     for(i=0; i<m; i++)
     {
         vcSemWait(room);
@@ -46,7 +42,6 @@ THREAD_RET Phil2(THREAD_PARAM param)
 THREAD_RET Phil3(THREAD_PARAM param)
 {
     int i;
-    vcMutexLock(lol);
     for(i=0; i<m; i++)
     {
         vcSemWait(room);
@@ -63,7 +58,6 @@ THREAD_RET Phil3(THREAD_PARAM param)
 THREAD_RET Phil4(THREAD_PARAM param)
 {
     int i;
-    vcMutexLock(lol);
     for(i=0; i<m; i++)
     {
         vcSemWait(room);
@@ -80,7 +74,6 @@ THREAD_RET Phil4(THREAD_PARAM param)
 THREAD_RET Phil5(THREAD_PARAM param)
 {
     int i;
-    vcMutexLock(lol);
     for(i=0; i<m; i++)
     {
         vcSemWait(room);
@@ -102,10 +95,6 @@ int main(void) {
     fork4 = vcSemCreate("fork4", 1);
     fork5 = vcSemCreate("fork5", 1);
     room = vcSemCreate("room", 4);
-    
-    lol = vcMutexCreate("hi");
-    printf("hello\n");
-
     vcCobegin(Phil1, (void*)"This");
     vcCobegin(Phil2, (void*)"is");
     vcCobegin(Phil3, (void*)"a");

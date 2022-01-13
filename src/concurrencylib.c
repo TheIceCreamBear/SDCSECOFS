@@ -1,10 +1,8 @@
 #include "concurrencylib.h"
 
-//Global variables from ourprogram.c
-extern CSSem* vcThreadSem;
-extern CSSem* vcThreadSemInitial;
-extern CSThread* vcThreadList;
-extern CSThread* vcThreadListInitial;
+extern CSThread* vizconThreadList;
+extern CSThread* vizconThreadListInitial;
+extern CSSem* vizconThreadSem;
 
 //Create a thread instance of the createThread function
 CSThread* cobeginThread(void* arg)
@@ -25,27 +23,28 @@ THREAD_RET createThread(void* arg) {
     CSThread* thread = malloc(sizeof(CSThread));
     thread->next = NULL;
     if (thread == NULL) {
-        return (THREAD_RET)-1;
+        return NULL;
     }
     void** arr = (void**)arg;
-    semWait(vcThreadSemInitial);
+    semWait(vizconThreadSem);
     #if defined(_WIN32) // windows
     thread->thread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)arr[0], arr[1], 0, &(thread->id));
     #elif defined(__APPLE__) || defined(__linux__)
     pthread_create(&thread->thread, NULL, arr[0], arr[1]);
     #endif
-    if(vcThreadListInitial == NULL)
+    if(vizconThreadListInitial == NULL)
     {
-        vcThreadList = thread;
-        vcThreadListInitial = thread;
+        vizconThreadList = thread;
+        vizconThreadListInitial = thread;
     }
     else
     {
-        vcThreadList->next = thread;
-        vcThreadList = thread;
+        vizconThreadList->next = thread;
+        vizconThreadList = thread;
     }
-    semSignal(vcThreadSemInitial);
+    semSignal(vizconThreadSem);
     free(arg);
+    return thread;
 }
  //Waits for thread to complete before being joined back into main function
 int joinThread(CSThread* thread) {
@@ -117,17 +116,11 @@ CSSem* semCreate(SEM_NAME name, SEM_VALUE maxValue)
     }
     sem->count = maxValue;
     #endif
-    if(vcThreadSem != NULL)
-    {
-        vcThreadSem->next = sem;
-        vcThreadSem = sem;
-    }
     return sem;
 }
 
 //Releases 1 permit from semaphore and increment its count
-//returns 1 if successful, else 0
-int semSignal(CSSem* sem)
+void semSignal(CSSem* sem)
 {
     #if defined(_WIN32) // windows
     ReleaseSemaphore(sem->sem, 1, NULL);
@@ -136,22 +129,16 @@ int semSignal(CSSem* sem)
     sem_post(sem->sem);
     sem->count = sem->count + 1;
     #endif
-    return 1;
 }
 
 //Waits for semaphore to become available, attaining 1 permit from semaphore and decrementing its count
-//returns 1 if available, else 0
-int semWait(CSSem* sem)
+void semWait(CSSem* sem)
 {
     #if defined(_WIN32) // windows
     if(WaitForSingleObject(sem->sem, INFINITE) == WAIT_OBJECT_0)
     {
         sem->count = sem->count - 1;
-        return 1;
-    }
-    else
-    {
-        return 0;
+        return;
     }
     printf("decrementSemaphore error %d. Exiting...\n", GetLastError());
     exit(0);
@@ -159,16 +146,11 @@ int semWait(CSSem* sem)
     if(!sem_wait(sem->sem))
     {
         sem->count = sem->count - 1;
-        return 1;
-    }
-    else
-    {
-        return 0;
+        return;
     }
     printf("decrementSemaphore error %d. Exiting...\n", errno);
     exit(0);
     #endif
-    return 0;
 }
 
 //Try to attain 1 permit from semaphore and decrement its count
@@ -211,8 +193,7 @@ int semValue(CSSem* sem)
 }
 
 //Frees all data associated with a CSSem type, including itself
-//returns 1 if successful, else 0
-int semClose(CSSem* sem)
+void semClose(CSSem* sem)
 {
     #if defined(_WIN32) // windows
     CloseHandle(sem->sem);
@@ -221,6 +202,141 @@ int semClose(CSSem* sem)
     sem_close(sem->sem);
     free(sem);
     #endif
+}
 
-    return 1;
+//Create a mutex lock
+CSMutex* mutexCreate(char* name)
+{
+    if(name == NULL)
+    {
+        return NULL;
+    }
+    CSMutex* mutex = (CSMutex*)malloc(sizeof(CSMutex));
+    mutex->next = NULL;
+    #if defined(_WIN32) // windows
+    mutex->mutex = CreateMutex(NULL, FALSE, name);
+    if(mutex->mutex == NULL || GetLastError() == ERROR_ALREADY_EXISTS)
+    {
+        free(mutex);
+        return NULL;
+    }
+    #elif defined(__linux__) || defined(__APPLE__)
+    mutex->mutex = (pthread_mutex_t*)malloc(sizeof(pthread_mutex_t));
+    if(pthread_mutex_init(mutex->mutex, NULL))
+    {
+        printf("mutexCreate error: %d. Exiting...\n", errno);
+        exit(0);
+    }
+    #endif
+    return mutex;
+}
+
+//Attain a mutex lock, or wait until it becomes available
+void mutexLock(CSMutex* mutex)
+{
+    #if defined(_WIN32) // windows
+    DWORD result = WaitForSingleObject(mutex->mutex, INFINITE);
+    if(result == WAIT_OBJECT_0)
+    {
+        return;
+    }
+    else if(result == WAIT_ABANDONED)
+    {
+        printf("Mutex was abandonded. Exiting...\n");
+        exit(0);
+    }
+    #elif defined(__linux__) || defined(__APPLE__)
+    if(!pthread_mutex_lock(mutex->mutex))
+    {
+        return;
+    }
+    #endif
+    printf("mutexLock error %d. Exiting...\n", errno);
+    exit(0);
+}
+
+//Try to obtain a mutex lock
+//Returns immediately if the mutex lock is unavailable
+//returns 1 if available, else 0
+int mutexTryLock(CSMutex* mutex)
+{
+    #if defined(_WIN32) // windows
+    if(WaitForSingleObject(mutex->mutex, 0) == WAIT_OBJECT_0)
+    {
+        return 1;
+    }
+    else
+    {
+        return 0;
+    }
+    printf("mutexLock error %d. Exiting...\n", GetLastError());
+    exit(0);
+    #elif defined(__linux__) || defined(__APPLE__)
+    if(!pthread_mutex_trylock(mutex->mutex))
+    {
+        return 1;
+    }
+    else
+    {
+        return 0;
+    }
+    printf("mutexLock error %d. Exiting...\n", errno);
+    exit(0);
+    #endif
+    return 0;
+}
+
+//Release a mutex lock
+void mutexUnlock(CSMutex* mutex)
+{
+    #if defined(_WIN32) // windows
+    ReleaseMutex(mutex->mutex);
+    #elif defined(__linux__) || defined(__APPLE__)
+    pthread_mutex_unlock(mutex->mutex);
+    #endif
+}
+
+//Close a mutex lock
+void mutexClose(CSMutex* mutex)
+{
+    #if defined(_WIN32) // windows
+    CloseHandle(mutex->mutex);
+    free(mutex);
+    #elif defined(__linux__) || defined(__APPLE__)
+    pthread_mutex_destroy(mutex->mutex);
+    free(mutex->mutex);
+    free(mutex);
+    #endif
+}
+
+//Check if a mutex lock is available
+//Returns 1 if true, else 0
+int mutexStatus(CSMutex* mutex)
+{
+    #if defined(_WIN32) // windows
+    if(WaitForSingleObject(mutex->mutex, 0) == WAIT_OBJECT_0)
+    {
+        mutexUnlock(mutex);
+        return 1;
+    }
+    else
+    {
+        return 0;
+    }
+    printf("mutexStatus error %d. Exiting...\n", GetLastError());
+    exit(0);
+    #elif defined(__linux__) || defined(__APPLE__)
+    if(!pthread_mutex_trylock(mutex->mutex))
+    {
+        mutexUnlock(mutex);
+        return 1;
+    }
+    else
+    {
+        return 0;
+    }
+    printf("mutexStatus error %d. Exiting...\n", errno);
+    exit(0);
+    #endif
+    return 0;
 }

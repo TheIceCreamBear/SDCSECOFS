@@ -13,6 +13,7 @@ typedef DWORD (*threadFunc) (LPVOID param);
 #define SEM_TYPE HANDLE
 #define SEM_NAME LPCSTR
 #define SEM_VALUE LONG
+#define MUTEX_TYPE HANDLE
 #elif __linux__ || __APPLE__ //Linux and MacOS's libraries and definitions
 #include <pthread.h>
 #include <semaphore.h>
@@ -26,6 +27,7 @@ typedef void* (*threadFunc) (void* param);
 #define SEM_TYPE sem_t*
 #define SEM_NAME const char*
 #define SEM_VALUE unsigned int
+#define MUTEX_TYPE pthread_mutex_t*
 #endif
 
 // meta: proto type for the compiled name of the user function so we have access to it in our program
@@ -50,18 +52,33 @@ typedef struct CSSem {
     struct CSSem* next;
 } CSSem;
 
+// concurrency simulator mutex structure
+typedef struct CSMutex {
+    MUTEX_TYPE mutex;
+    struct CSMutex* next;
+} CSMutex;
+
 //Thread functions
 CSThread* cobeginThread(void* arg);
-CSThread* createThread(void* arg);
+THREAD_RET createThread(void* arg);
 int joinThread(CSThread* thread);
 void freeCSThread(CSThread* thread);
 void sleepThread(int milliseconds);
 
 //Semaphore functions
 CSSem* semCreate(SEM_NAME name, SEM_VALUE maxValue);
-int semSignal(CSSem* sem);
-int semWait(CSSem* sem);
+void semSignal(CSSem* sem);
+void semWait(CSSem* sem);
 int semTryWait(CSSem* sem);
 int semValue(CSSem* sem);
-int semClose(CSSem* sem);
+void semClose(CSSem* sem);
+
+//Mutex functions
+CSMutex* mutexCreate(char* name);
+void mutexLock(CSMutex* mutex);
+int mutexTryLock(CSMutex* mutex);
+void mutexUnlock(CSMutex* mutex);
+void mutexClose(CSMutex* mutex);
+int mutexStatus(CSMutex* mutex);
+
 #endif

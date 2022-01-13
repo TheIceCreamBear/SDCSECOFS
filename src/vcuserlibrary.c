@@ -2,12 +2,14 @@
 
 //Lists used to track all threads and semaphores
 CSSem* vizconThreadSem = NULL; //Blocks createthread threads, released by waitforcompletion/waitforreturn. Count used for number of threads created
+CSThread* vizconCobeginList = NULL; // List of all cobegin threads
+CSThread* vizconCobeginListInitial = NULL;
 CSThread* vizconThreadList = NULL; //Linked list of all threads
 CSThread* vizconThreadListInitial = NULL;
 CSSem* vizconSemList = NULL; //Linked list of all semaphores
 CSSem* vizconSemListInitial = NULL;
-CSThread* vizconCobeginList = NULL; // List of all cobegin threads
-CSThread* vizconCobeginListInitial = NULL;
+CSMutex* vizconMutexList = NULL; //Linked list of all mutexes
+CSMutex* vizconMutexListInitial = NULL;
 
 //Create a thread instance with arguments
 //Threads do not begin until vcWaitForCompletion or vcWaitForReturn is called
@@ -116,6 +118,14 @@ void* vcWaitForReturn()
     }
     semClose(vizconThreadSem);
 
+    //Free all mutex locks
+    while(vizconMutexList != NULL)
+    {
+        vizconMutexList = vizconMutexListInitial->next;
+        mutexClose(vizconMutexListInitial);
+        vizconMutexListInitial = vizconMutexList;
+    }
+
     return (void*)arr;
 }
 
@@ -165,7 +175,51 @@ void vcSemSignal(vcSem* sem)
 }
 
 //Return the current number of permits from semaphore
-int vcValue(vcSem* sem)
+int vcSemValue(vcSem* sem)
 {
     return semValue(sem);
+}
+
+vcMutex* vcMutexCreate(char* name)
+{
+    vcMutex* mutex = mutexCreate(name);
+    if(vizconMutexList == NULL)
+    {
+        vizconMutexListInitial = mutex;
+        vizconMutexList = mutex;
+    }
+    else
+    {
+        vizconMutexList->next = mutex;
+        vizconMutexList = mutex;
+    }
+    return mutex;
+}
+
+void vcMutexLock(vcMutex* mutex)
+{
+    mutexLock(mutex);
+    sleepThread(20);
+}
+
+int vcMutexTrylock(vcMutex* mutex)
+{
+    if(mutexTryLock(mutex))
+    {
+        sleepThread(20);
+        return 1;
+    }
+    sleepThread(20);
+    return 0;
+}
+
+void vcMutexUnlock(vcMutex* mutex)
+{
+    mutexUnlock(mutex);
+    sleepThread(20);
+}
+
+int vcMutexStatus(vcMutex* mutex)
+{
+    return mutexStatus(mutex);
 }

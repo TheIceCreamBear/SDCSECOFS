@@ -94,5 +94,6 @@ int mutexStatus(CSMutex* mutex);
 //Other functions
 void vizconAbort();
 void vizconError(int func, int err);
+void vizconFree();
 
 #endif

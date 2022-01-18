@@ -387,7 +387,8 @@ int mutexStatus(CSMutex* mutex)
 //Handles error from concurrencylib and vcuserlibrary
 void vizconError(int func, int err)
 {
-    //vizconAbort();
+    semWait(vizconThreadSem->next);
+    vizconAbort();
     printf("\nError from ");
     switch(func)
     {
@@ -504,29 +505,61 @@ void vizconAbort()
 {
     #if defined(_WIN32) // windows
     DWORD dwExitCode = 0;
+    DWORD id = GetCurrentThreadId();
     while(vizconCobeginListInitial != NULL)
     {
-        TerminateThread(vizconCobeginListInitial->thread, dwExitCode);
+        if(vizconCobeginListInitial->id != id)
+        {
+            TerminateThread(vizconCobeginListInitial->thread, dwExitCode);
+        }
         vizconCobeginListInitial = vizconCobeginListInitial->next;
     }
     while(vizconThreadListInitial != NULL)
     {
-        TerminateThread(vizconThreadListInitial->thread, dwExitCode);
+        if(vizconThreadListInitial->id != id)
+        {
+            TerminateThread(vizconThreadListInitial->thread, dwExitCode);
+        }
         vizconThreadListInitial = vizconThreadListInitial->next;
     }
     #elif defined(__linux__) || defined(__APPLE__)
     printf("%d\n", errno);
     #endif
 
-    while(vizconSemList != NULL)
+    vizconFree();
+}
+
+//Free all vizcon data
+void vizconFree()
+{
+    //free all cobegin thread
+    while(vizconCobeginListInitial != NULL)
+    {
+        vizconCobeginList = vizconCobeginListInitial->next;
+        freeCSThread(vizconCobeginListInitial);
+        vizconCobeginListInitial = vizconCobeginList;
+    }
+
+    //free all user threads
+    while(vizconThreadListInitial != NULL)
+    {
+        vizconThreadList = vizconThreadListInitial->next;
+        freeCSThread(vizconThreadListInitial);
+        vizconThreadListInitial = vizconThreadList;
+    }
+
+    //Free all semaphores
+    while(vizconSemListInitial != NULL)
     {
         vizconSemList = vizconSemListInitial->next;
         semClose(vizconSemListInitial);
         vizconSemListInitial = vizconSemList;
     }
+    semClose(vizconThreadSem->next);
     semClose(vizconThreadSem);
 
-    while(vizconMutexList != NULL)
+    //Free all mutex locks
+    while(vizconMutexListInitial != NULL)
     {
         vizconMutexList = vizconMutexListInitial->next;
         mutexClose(vizconMutexListInitial);

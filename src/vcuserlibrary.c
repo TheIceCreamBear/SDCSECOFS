@@ -1,16 +1,5 @@
 #include "vcuserlibrary.h"
 
-//Lists used to track all threads and semaphores
-CSSem* vizconThreadSem = NULL; //Blocks createthread threads, released by waitforcompletion/waitforreturn. Count used for number of threads created
-CSThread* vizconCobeginList = NULL; // List of all cobegin threads
-CSThread* vizconCobeginListInitial = NULL;
-CSThread* vizconThreadList = NULL; //Linked list of all threads
-CSThread* vizconThreadListInitial = NULL;
-CSSem* vizconSemList = NULL; //Linked list of all semaphores
-CSSem* vizconSemListInitial = NULL;
-CSMutex* vizconMutexList = NULL; //Linked list of all mutexes
-CSMutex* vizconMutexListInitial = NULL;
-
 //Create a thread instance with arguments
 //Threads do not begin until vcWaitForCompletion or vcWaitForReturn is called
 void vcCobegin(threadFunc func, void* arg)
@@ -20,7 +9,7 @@ void vcCobegin(threadFunc func, void* arg)
         vizconThreadSem = semCreate("/vizconThreadSem", 1);
         semWait(vizconThreadSem);
     }
-    void** arr = malloc(sizeof(void*)*2);
+    void** arr = (void**)malloc(sizeof(void*)*2);
     arr[0] = func;
     arr[1] = arg;
     void* data = arr;
@@ -80,14 +69,14 @@ void vcWaitForCompletion()
 
 //Start all threads created by vcCobegin and return their results
 //Results are stored in a void double pointer
-void* vcWaitForReturn()
+THREAD_RET* vcWaitForReturn()
 {
     if(vizconCobeginListInitial == NULL)
     {
         return NULL;
     }
     int i = 0;
-    void** arr = malloc(sizeof(void*)*vizconThreadSem->count);
+    THREAD_RET* arr = (THREAD_RET*)malloc(sizeof(THREAD_RET)*vizconThreadSem->count);
 
     //Release all thread creators and ensure they have all been joined and freed
     semSignal(vizconThreadSem);
@@ -104,7 +93,7 @@ void* vcWaitForReturn()
     {
         vizconThreadList = vizconThreadListInitial->next;
         joinThread(vizconThreadListInitial);
-        arr[i++] = (void*)vizconThreadListInitial->returnVal;
+        arr[i++] = vizconThreadListInitial->returnVal;
         freeCSThread(vizconThreadListInitial);
         vizconThreadListInitial = vizconThreadList;
     }
@@ -126,7 +115,7 @@ void* vcWaitForReturn()
         vizconMutexListInitial = vizconMutexList;
     }
 
-    return (void*)arr;
+    return arr;
 }
 
 //Create a semaphore with a name and maximum permit count

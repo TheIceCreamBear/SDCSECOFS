@@ -3,7 +3,6 @@
 //universal libraries
 #include <stdio.h>
 #include <stdlib.h>
-
 #ifdef _WIN32 // window's libraries and definitions
 #include <windows.h>
 typedef DWORD (*threadFunc) (LPVOID param);
@@ -58,10 +57,21 @@ typedef struct CSMutex {
     struct CSMutex* next;
 } CSMutex;
 
+//Lists used to track all threads and semaphores
+CSSem* vizconThreadSem; //Blocks createthread threads, released by waitforcompletion/waitforreturn. Count used for number of threads created
+CSThread* vizconCobeginList; // List of all cobegin threads
+CSThread* vizconCobeginListInitial;
+CSThread* vizconThreadList; //Linked list of all threads
+CSThread* vizconThreadListInitial;
+CSSem* vizconSemList; //Linked list of all semaphores
+CSSem* vizconSemListInitial;
+CSMutex* vizconMutexList; //Linked list of all mutexes
+CSMutex* vizconMutexListInitial;
+
 //Thread functions
 CSThread* cobeginThread(void* arg);
 THREAD_RET createThread(void* arg);
-int joinThread(CSThread* thread);
+void joinThread(CSThread* thread);
 void freeCSThread(CSThread* thread);
 void sleepThread(int milliseconds);
 
@@ -80,5 +90,9 @@ int mutexTryLock(CSMutex* mutex);
 void mutexUnlock(CSMutex* mutex);
 void mutexClose(CSMutex* mutex);
 int mutexStatus(CSMutex* mutex);
+
+//Other functions
+void vizconAbort();
+void vizconError(int func, int err);
 
 #endif

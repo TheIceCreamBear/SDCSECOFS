@@ -8,7 +8,7 @@
 //Thread functions
 void vcCobegin(threadFunc func, void* arg);
 void vcWaitForCompletion();
-void* vcWaitForReturn();
+THREAD_RET* vcWaitForReturn();
 
 //Semaphore functions
 vcSem* vcSemCreate(char* name, int count);

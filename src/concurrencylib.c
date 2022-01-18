@@ -61,6 +61,7 @@ THREAD_RET createThread(void* arg) {
     free(arg);
     return (THREAD_RET)1;
 }
+
  //Waits for thread to complete before being joined back into main function
 void joinThread(CSThread* thread) {
     #if defined(_WIN32) // windows
@@ -68,6 +69,13 @@ void joinThread(CSThread* thread) {
     if(ret == WAIT_FAILED)
     {
         vizconError(1, GetLastError());
+    }
+    else if(ret == WAIT_OBJECT_0)
+    {
+        if(!GetExitCodeThread(thread->thread, &thread->returnVal))
+        {
+            vizconError(1, GetLastError());
+        }
     }
     else if(ret == WAIT_ABANDONED)
     {

@@ -69,14 +69,14 @@ void vcWaitForCompletion()
 
 //Start all threads created by vcCobegin and return their results
 //Results are stored in a void double pointer
-void* vcWaitForReturn()
+THREAD_RET* vcWaitForReturn()
 {
     if(vizconCobeginListInitial == NULL)
     {
         return NULL;
     }
     int i = 0;
-    void** arr = (void**)malloc(sizeof(void*)*vizconThreadSem->count);
+    THREAD_RET* arr = (THREAD_RET*)malloc(sizeof(THREAD_RET)*vizconThreadSem->count);
 
     //Release all thread creators and ensure they have all been joined and freed
     semSignal(vizconThreadSem);
@@ -93,7 +93,7 @@ void* vcWaitForReturn()
     {
         vizconThreadList = vizconThreadListInitial->next;
         joinThread(vizconThreadListInitial);
-        arr[i++] = (void*)vizconThreadListInitial->returnVal;
+        arr[i++] = vizconThreadListInitial->returnVal;
         freeCSThread(vizconThreadListInitial);
         vizconThreadListInitial = vizconThreadList;
     }
@@ -115,7 +115,7 @@ void* vcWaitForReturn()
         vizconMutexListInitial = vizconMutexList;
     }
 
-    return (void*)arr;
+    return arr;
 }
 
 //Create a semaphore with a name and maximum permit count

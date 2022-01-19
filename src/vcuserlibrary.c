@@ -8,6 +8,7 @@ void vcCobegin(threadFunc func, void* arg)
     {
         vizconThreadSem = semCreate("/vizconThreadSem", 1);
         semWait(vizconThreadSem);
+        vizconThreadSem->next = semCreate("/vizconAbortSem", 1);
     }
     void** arr = (void**)malloc(sizeof(void*)*2);
     arr[0] = func;
@@ -35,34 +36,27 @@ void vcWaitForCompletion()
     {
         return;
     }
+    CSThread* iterList = vizconCobeginListInitial;
 
-    //Release all thread creators and ensure they have all been joined and freed
+    //Release all thread creators and ensure they have all been joined
     semSignal(vizconThreadSem);
-    while(vizconCobeginListInitial != NULL)
+    while(iterList != NULL)
     {
-        vizconCobeginList = vizconCobeginListInitial->next;
-        joinThread(vizconCobeginListInitial);
-        freeCSThread(vizconCobeginListInitial);
-        vizconCobeginListInitial = vizconCobeginList;
+        vizconCobeginList = iterList->next;
+        joinThread(iterList);
+        iterList = vizconCobeginList;
     }
 
-    //Begin to join and free all user threads
-    while(vizconThreadListInitial != NULL)
+    //Begin to join all user threads, as well as populate return array
+    iterList = vizconThreadListInitial;
+    while(iterList != NULL)
     {
-        vizconThreadList = vizconThreadListInitial->next;
-        joinThread(vizconThreadListInitial);
-        freeCSThread(vizconThreadListInitial);
-        vizconThreadListInitial = vizconThreadList;
+        vizconThreadList = iterList->next;
+        joinThread(iterList);
+        iterList = vizconThreadList;
     }
 
-    //Free all semaphores
-    while(vizconSemList != NULL)
-    {
-        vizconSemList = vizconSemListInitial->next;
-        semClose(vizconSemListInitial);
-        vizconSemListInitial = vizconSemList;
-    }
-    semClose(vizconThreadSem);
+    vizconFree();
 
     return;
 }
@@ -77,43 +71,28 @@ THREAD_RET* vcWaitForReturn()
     }
     int i = 0;
     THREAD_RET* arr = (THREAD_RET*)malloc(sizeof(THREAD_RET)*vizconThreadSem->count);
+    CSThread* iterList = vizconCobeginListInitial;
 
-    //Release all thread creators and ensure they have all been joined and freed
+    //Release all thread creators and ensure they have all been joined
     semSignal(vizconThreadSem);
-    while(vizconCobeginListInitial != NULL)
+    while(iterList != NULL)
     {
-        vizconCobeginList = vizconCobeginListInitial->next;
-        joinThread(vizconCobeginListInitial);
-        freeCSThread(vizconCobeginListInitial);
-        vizconCobeginListInitial = vizconCobeginList;
+        vizconCobeginList = iterList->next;
+        joinThread(iterList);
+        iterList = vizconCobeginList;
     }
 
-    //Begin to join and free all user threads, as well as populate return array
-    while(vizconThreadListInitial != NULL)
+    //Begin to join all user threads, as well as populate return array
+    iterList = vizconThreadListInitial;
+    while(iterList != NULL)
     {
-        vizconThreadList = vizconThreadListInitial->next;
-        joinThread(vizconThreadListInitial);
-        arr[i++] = vizconThreadListInitial->returnVal;
-        freeCSThread(vizconThreadListInitial);
-        vizconThreadListInitial = vizconThreadList;
+        vizconThreadList = iterList->next;
+        joinThread(iterList);
+        arr[i++] = iterList->returnVal;
+        iterList = vizconThreadList;
     }
 
-    //Free all semaphores
-    while(vizconSemList != NULL)
-    {
-        vizconSemList = vizconSemListInitial->next;
-        semClose(vizconSemListInitial);
-        vizconSemListInitial = vizconSemList;
-    }
-    semClose(vizconThreadSem);
-
-    //Free all mutex locks
-    while(vizconMutexList != NULL)
-    {
-        vizconMutexList = vizconMutexListInitial->next;
-        mutexClose(vizconMutexListInitial);
-        vizconMutexListInitial = vizconMutexList;
-    }
+    vizconFree();
 
     return arr;
 }

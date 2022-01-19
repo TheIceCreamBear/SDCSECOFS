@@ -3,6 +3,7 @@
 //universal libraries
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #ifdef _WIN32 // window's libraries and definitions
 #include <windows.h>
 typedef DWORD (*threadFunc) (LPVOID param);

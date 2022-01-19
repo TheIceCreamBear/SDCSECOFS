@@ -105,7 +105,7 @@ int main(void) {
     int i; 
     for(i = 0; i < 5; i++)
     {
-        printf("Thread retrieved: %d\n", arr[i]);
+        printf("Thread retrieved: %p\n", arr[i]);
     }
     free(arr);
     return 0;

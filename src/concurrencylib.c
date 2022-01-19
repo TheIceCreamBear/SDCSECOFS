@@ -4,9 +4,8 @@
 CSThread* cobeginThread(void* arg)
 {
     CSThread* thread = (CSThread*)malloc(sizeof(CSThread));
-    if (thread == NULL) 
+    if(thread == NULL) 
     {
-        free(thread);
         vizconError(0, 8);
     }
     thread->next = NULL;
@@ -19,7 +18,12 @@ CSThread* cobeginThread(void* arg)
         vizconError(0, err);
     }
     #elif defined(__APPLE__) || defined(__linux__)
-    pthread_create(&thread->thread, NULL, createThread, arg);
+    int err = pthread_create(&thread->thread, NULL, createThread, arg);
+    if(err)
+    {
+        free(thread);
+        vizconError(0, err);
+    }
     #endif
     return thread;
 }
@@ -30,7 +34,6 @@ THREAD_RET createThread(void* arg) {
     CSThread* thread = (CSThread*)malloc(sizeof(CSThread));
     if (thread == NULL) 
     {
-        free(thread);
         vizconError(0, 8);
     }
     thread->next = NULL;
@@ -45,7 +48,12 @@ THREAD_RET createThread(void* arg) {
         vizconError(0, err);
     }
     #elif defined(__APPLE__) || defined(__linux__)
-    pthread_create(&thread->thread, NULL, arr[0], arr[1]);
+    int err = pthread_create(&thread->thread, NULL, arr[0], arr[1]);
+    if(err)
+    {
+        free(thread);
+        vizconError(0, err);
+    }
     #endif
     if(vizconThreadListInitial == NULL)
     {
@@ -86,7 +94,12 @@ void joinThread(CSThread* thread) {
         vizconError(1, 501);
     }
     #elif defined(__APPLE__) || defined(__linux__)
-    pthread_join(thread->thread, &thread->returnVal);
+    int err = pthread_join(thread->thread, &thread->returnVal);
+    if(err)
+    {
+        free(thread);
+        vizconError(1, err);
+    }
     #endif
 }
 
@@ -122,8 +135,7 @@ CSSem* semCreate(SEM_NAME name, SEM_VALUE maxValue)
     }
     CSSem* sem = (CSSem*)malloc(sizeof(CSSem));
     if (sem == NULL) {
-        free(sem);
-        vizconError(0, 8);
+        vizconError(3, 8);
     }
     sem->next = NULL;
     #if defined(_WIN32) // windows
@@ -137,11 +149,15 @@ CSSem* semCreate(SEM_NAME name, SEM_VALUE maxValue)
     sem->count = maxValue;
     #elif defined(__linux__) || defined(__APPLE__)
     sem->sem = sem_open(name, O_CREAT | O_EXCL, 0644, maxValue);
-    sem_unlink(name);
     if(sem->sem == SEM_FAILED)
     {
-        printf("createSemaphore error: %d. Exiting...\n", errno);
-        exit(0);
+        free(sem);
+        vizconError(3, errno);
+    }
+    if(sem_unlink(name))
+    {
+        free(sem);
+        vizconError(3, errno);
     }
     sem->count = maxValue;
     #endif
@@ -158,7 +174,10 @@ void semSignal(CSSem* sem)
     }
     sem->count = sem->count + 1;
     #elif defined(__linux__) || defined(__APPLE__)
-    sem_post(sem->sem);
+    if(sem_post(sem->sem))
+    {
+        vizconError(6, errno);
+    }
     sem->count = sem->count + 1;
     #endif
 }
@@ -185,10 +204,9 @@ void semWait(CSSem* sem)
         vizconError(4, 501);
     }
     #elif defined(__linux__) || defined(__APPLE__)
-    if(!sem_wait(sem->sem))
+    if(sem_wait(sem->sem))
     {
-        sem->count = sem->count - 1;
-        return;
+        vizconError(4, errno);
     }
     #endif
 }
@@ -219,6 +237,10 @@ int semTryWait(CSSem* sem)
         sem->count = sem->count - 1;
         return 1;
     }
+    else if(errno != EAGAIN)
+    {
+        vizconError(5, errno);
+    }
     #endif
     return 0;
 }
@@ -239,7 +261,10 @@ void semClose(CSSem* sem)
     }
     free(sem);
     #elif defined(__linux__) || defined(__APPLE__)
-    sem_close(sem->sem);
+    if(sem_close(sem->sem))
+    {
+        vizconError(1, errno);
+    }
     free(sem);
     #endif
 }
@@ -252,8 +277,7 @@ CSMutex* mutexCreate(char* name)
         return NULL;
     }
     CSMutex* mutex = (CSMutex*)malloc(sizeof(CSMutex));
-    if (mutex == NULL) {
-        free(mutex);
+    if(mutex == NULL) {
         vizconError(8, 8);
     }
     mutex->next = NULL;
@@ -267,10 +291,16 @@ CSMutex* mutexCreate(char* name)
     }
     #elif defined(__linux__) || defined(__APPLE__)
     mutex->mutex = (pthread_mutex_t*)malloc(sizeof(pthread_mutex_t));
-    if(pthread_mutex_init(mutex->mutex, NULL))
+    if(mutex->mutex == NULL) {
+        free(mutex);
+        vizconError(8, 8);
+    }
+    int err = pthread_mutex_init(mutex->mutex, NULL);
+    if(err)
     {
-        printf("mutexCreate error: %d. Exiting...\n", errno);
-        exit(0);
+        free(mutex->mutex);
+        free(mutex);
+        vizconError(8, errno);
     }
     #endif
     return mutex;
@@ -294,9 +324,10 @@ void mutexLock(CSMutex* mutex)
         vizconError(9, 501);
     }
     #elif defined(__linux__) || defined(__APPLE__)
-    if(!pthread_mutex_lock(mutex->mutex))
+    int err = pthread_mutex_lock(mutex->mutex);
+    if(err)
     {
-        return;
+        vizconError(9, err);
     }
     #endif
 }
@@ -321,16 +352,18 @@ int mutexTryLock(CSMutex* mutex)
         vizconError(10, 500);
     }
     #elif defined(__linux__) || defined(__APPLE__)
-    if(!pthread_mutex_trylock(mutex->mutex))
+    int err = pthread_mutex_trylock(mutex->mutex);
+    if(!err)
     {
         return 1;
     }
     else
     {
-        return 0;
+        if(err != EBUSY)
+        {
+            vizconError(10, err);
+        }
     }
-    printf("mutexLock error %d. Exiting...\n", errno);
-    exit(0);
     #endif
     return 0;
 }
@@ -344,7 +377,11 @@ void mutexUnlock(CSMutex* mutex)
         vizconError(11, GetLastError());
     }
     #elif defined(__linux__) || defined(__APPLE__)
-    pthread_mutex_unlock(mutex->mutex);
+    int err = pthread_mutex_unlock(mutex->mutex);
+    if(err) 
+    {
+        vizconError(11, err);
+    }
     #endif
 }
 
@@ -358,7 +395,11 @@ void mutexClose(CSMutex* mutex)
     }
     free(mutex);
     #elif defined(__linux__) || defined(__APPLE__)
-    pthread_mutex_destroy(mutex->mutex);
+    int err = pthread_mutex_destroy(mutex->mutex);
+    if(err) 
+    {
+        vizconError(1, err);
+    }
     free(mutex->mutex);
     free(mutex);
     #endif
@@ -375,7 +416,7 @@ int mutexStatus(CSMutex* mutex)
         return 1;
     }
     #elif defined(__linux__) || defined(__APPLE__)
-    if(!pthread_mutex_trylock(mutex->mutex))
+    if(pthread_mutex_trylock(mutex->mutex))
     {
         mutexUnlock(mutex);
         return 1;
@@ -470,8 +511,10 @@ void vizconError(int func, int err)
         printf("system error ");
     }
     #elif defined(__linux__) || defined(__APPLE__)
+    char* message;
     if(err < 500)
     {
+        message = strerror(err);
         printf("errno ");
     }
     #endif
@@ -523,7 +566,23 @@ void vizconAbort()
         vizconThreadListInitial = vizconThreadListInitial->next;
     }
     #elif defined(__linux__) || defined(__APPLE__)
-    printf("%d\n", errno);
+    int id = pthread_self();
+    while(vizconCobeginListInitial != NULL)
+    {
+        if((int)vizconCobeginListInitial->thread != id)
+        {
+            pthread_cancel(vizconCobeginListInitial->thread);
+        }
+        vizconCobeginListInitial = vizconCobeginListInitial->next;
+    }
+    while(vizconThreadListInitial != NULL)
+    {
+        if((int)vizconThreadListInitial->thread != id)
+        {
+            pthread_cancel(vizconThreadListInitial->thread);
+        }
+        vizconThreadListInitial = vizconThreadListInitial->next;
+    }
     #endif
 
     vizconFree();

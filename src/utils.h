@@ -9,7 +9,6 @@
 #elif __linux__ || __APPLE__ //Linux and MacOS's libraries and definitions
 #include <pthread.h>
 #include <errno.h>
-#include <unistd.h>
 #endif
 
 //Other functions

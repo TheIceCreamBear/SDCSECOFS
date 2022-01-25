@@ -6,6 +6,7 @@ typedef DWORD (*threadFunc) (LPVOID param);
 #define THREAD_RET DWORD
 #define THREAD_PARAM LPVOID
 #elif __linux__ || __APPLE__ //Linux and MacOS's libraries and definitions
+#include <unistd.h>
 typedef void* (*threadFunc) (void* param);
 #define THREAD_FUNC_RET void*
 #define THREAD_RET void*

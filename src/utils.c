@@ -52,13 +52,10 @@ void vizconAbort()
     #if defined(_WIN32) // windows
     DWORD dwExitCode = 0;
     DWORD id = GetCurrentThreadId();
-    printf("thread is %d\n", id);
     while(vizconThreadListInitial != NULL)
     {
-        printf("found %d\n", vizconThreadListInitial->id);
         if(vizconThreadListInitial->id != id)
         {
-            printf("using %d\n", vizconThreadListInitial->id);
             TerminateThread(vizconThreadListInitial->thread, dwExitCode);
         }
         vizconThreadListInitial = vizconThreadListInitial->next;

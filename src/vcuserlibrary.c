@@ -2,58 +2,48 @@
 
 //Create a thread instance with arguments
 //Threads do not begin until vcWaitForCompletion or vcWaitForReturn is called
-void vcCobegin(threadFunc func, void* arg)
+void vcThreadAdd(threadFunc func, void* arg)
 {
-    if(vizconThreadSem == NULL)
-    {
-        vizconThreadSem = semCreate("/vizconThreadSem", 1);
-        semWait(vizconThreadSem);
-        vizconThreadSem->next = semCreate("/vizconAbortSem", 1);
-    }
     void** arr = (void**)malloc(sizeof(void*)*2);
     arr[0] = func;
     arr[1] = arg;
-    void* data = arr;
-    CSThread* thread = cobeginThread(data);
-    if(vizconCobeginList == NULL)
+    CSThread* thread = threadCreate((void*)arr);
+    free(arr);
+    if(vizconThreadListInitial == NULL)
     {
-        vizconCobeginList = thread;
-        vizconCobeginListInitial = thread;
+        vizconThreadList = thread;
+        vizconThreadListInitial = thread;
     }
     else
     {
-        vizconCobeginList->next = thread;
-        vizconCobeginList = thread;
+        vizconThreadList->next = thread;
+        vizconThreadList = thread;
     }
-    vizconThreadSem->count = vizconThreadSem->count + 1;
     return;
 }
 
 //Start all threads created by vcCobegin
-void vcWaitForCompletion()
+void vcThreadStart()
 {
-    if(vizconCobeginListInitial == NULL)
+    if(vizconThreadListInitial == NULL)
     {
         return;
     }
-    CSThread* iterList = vizconCobeginListInitial;
 
-    //Release all thread creators and ensure they have all been joined
-    semSignal(vizconThreadSem);
-    while(iterList != NULL)
+    //Begin all threads
+    vizconThreadList = vizconThreadListInitial;
+    while(vizconThreadList != NULL)
     {
-        vizconCobeginList = iterList->next;
-        joinThread(iterList);
-        iterList = vizconCobeginList;
+        threadStart(vizconThreadList);
+        vizconThreadList = vizconThreadList->next;
     }
 
-    //Begin to join all user threads, as well as populate return array
-    iterList = vizconThreadListInitial;
-    while(iterList != NULL)
+    //Wait for all threads to complete
+    vizconThreadList = vizconThreadListInitial;
+    while(vizconThreadList != NULL)
     {
-        vizconThreadList = iterList->next;
-        joinThread(iterList);
-        iterList = vizconThreadList;
+        threadJoin(vizconThreadList);
+        vizconThreadList = vizconThreadList->next;
     }
 
     vizconFree();
@@ -63,38 +53,47 @@ void vcWaitForCompletion()
 
 //Start all threads created by vcCobegin and return their results
 //Results are stored in a void double pointer
-THREAD_RET* vcWaitForReturn()
+THREAD_RET* vcThreadReturn()
 {
-    if(vizconCobeginListInitial == NULL)
+    if(vizconThreadListInitial == NULL)
     {
         return NULL;
     }
     int i = 0;
-    THREAD_RET* arr = (THREAD_RET*)malloc(sizeof(THREAD_RET)*vizconThreadSem->count);
-    CSThread* iterList = vizconCobeginListInitial;
-
-    //Release all thread creators and ensure they have all been joined
-    semSignal(vizconThreadSem);
-    while(iterList != NULL)
+    
+    //Begin all threads and get number of threads
+    vizconThreadList = vizconThreadListInitial;
+    while(vizconThreadList != NULL)
     {
-        vizconCobeginList = iterList->next;
-        joinThread(iterList);
-        iterList = vizconCobeginList;
+        threadStart(vizconThreadList);
+        vizconThreadList = vizconThreadList->next;
+        i++;
     }
+    THREAD_RET* arr = (THREAD_RET*)malloc(sizeof(THREAD_RET)*i);
+    i = 0;
 
-    //Begin to join all user threads, as well as populate return array
-    iterList = vizconThreadListInitial;
-    while(iterList != NULL)
+    //Wait for all threads to complete and get return values
+    vizconThreadList = vizconThreadListInitial;
+    while(vizconThreadList != NULL)
     {
-        vizconThreadList = iterList->next;
-        joinThread(iterList);
-        arr[i++] = iterList->returnVal;
-        iterList = vizconThreadList;
+        threadJoin(vizconThreadList);
+        arr[i++] = vizconThreadList->returnVal;
+        vizconThreadList = vizconThreadList->next;
     }
 
     vizconFree();
 
     return arr;
+}
+
+//Puts the current thread to sleep for specified amount of time in milliseconds
+void vcThreadSleep(int milliseconds)
+{
+    #ifdef _WIN32
+    Sleep(milliseconds);
+    #else
+    usleep(milliseconds*1000);
+    #endif
 }
 
 //Create a semaphore with a name and maximum permit count
@@ -119,7 +118,7 @@ vcSem* vcSemCreate(char* name, int count)
 void vcSemWait(vcSem* sem)
 {
     semWait(sem);
-    sleepThread(20);
+    vcThreadSleep(20);
 }
 
 //Consume one permit from a sempahore, or return immediately if none are available
@@ -128,10 +127,8 @@ int vcSemTryWait(vcSem* sem)
 {
     if(semTryWait(sem))
     {
-        sleepThread(20);
         return 1;
     }
-    sleepThread(20);
     return 0;
 }
 
@@ -139,7 +136,7 @@ int vcSemTryWait(vcSem* sem)
 void vcSemSignal(vcSem* sem)
 {
     semSignal(sem);
-    sleepThread(20);
+    vcThreadSleep(20);
 }
 
 //Return the current number of permits from semaphore
@@ -167,24 +164,20 @@ vcMutex* vcMutexCreate(char* name)
 void vcMutexLock(vcMutex* mutex)
 {
     mutexLock(mutex);
-    sleepThread(20);
 }
 
 int vcMutexTrylock(vcMutex* mutex)
 {
     if(mutexTryLock(mutex))
     {
-        sleepThread(20);
         return 1;
     }
-    sleepThread(20);
     return 0;
 }
 
 void vcMutexUnlock(vcMutex* mutex)
 {
     mutexUnlock(mutex);
-    sleepThread(20);
 }
 
 int vcMutexStatus(vcMutex* mutex)

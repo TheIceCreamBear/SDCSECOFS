@@ -2,7 +2,7 @@
 
 //Create a thread instance with arguments
 //Threads do not begin until vcWaitForCompletion or vcWaitForReturn is called
-void vcThreadAdd(threadFunc func, void* arg)
+void vcThreadQueue(threadFunc func, void* arg)
 {
     void** arr = (void**)malloc(sizeof(void*)*2);
     arr[0] = func;

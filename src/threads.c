@@ -21,12 +21,8 @@ CSThread* threadCreate(void* arg)
         vizconError("vcThreadAdd", err);
     }
     #elif defined(__APPLE__) || defined(__linux__)
-    int err = pthread_create(&thread->thread, NULL, arr[0], arr[1]);
-    if(err)
-    {
-        free(thread);
-        vizconError("vcThreadAdd", err);
-    }
+    thread->func = arr[0];
+    thread->arg = arr[1];
     #endif
     return thread;
 }
@@ -35,9 +31,17 @@ CSThread* threadCreate(void* arg)
 void threadStart(CSThread* thread)
 {
     #if defined(_WIN32) // windows
-    ResumeThread(thread->thread);
+    if(ResumeThread(thread->thread) == -1)
+    {
+        vizconError("vcThreadStart/vcThreadReturn", GetLastError());
+    }
     #elif defined(__APPLE__) || defined(__linux__)
-    printf("lol");
+    int err = pthread_create(&thread->thread, NULL, thread->func, thread->arg);
+    if(err)
+    {
+        free(thread);
+        vizconError("vcThreadAdd", err);
+    }
     #endif
 }
 

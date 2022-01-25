@@ -6,7 +6,6 @@ typedef DWORD (*threadFunc) (LPVOID param);
 #define THREAD_RET DWORD
 #define THREAD_PARAM LPVOID
 #elif __linux__ || __APPLE__ //Linux and MacOS's libraries and definitions
-#include <fcntl.h>
 typedef void* (*threadFunc) (void* param);
 #define THREAD_FUNC_RET void*
 #define THREAD_RET void*
@@ -20,6 +19,8 @@ typedef struct CSThread {
     THREAD_RET id;
     #elif defined(__APPLE__) || defined(__linux__)
     pthread_t thread;
+    threadFunc func;
+    void* arg;
     #endif
     THREAD_RET returnVal;
     struct CSThread* next;

@@ -6,6 +6,7 @@
 #define SEM_VALUE LONG
 #elif __linux__ || __APPLE__ //Linux and MacOS's libraries and definitions
 #include <semaphore.h>
+#include <fcntl.h>
 #define SEM_TYPE sem_t*
 #define SEM_NAME const char*
 #define SEM_VALUE unsigned int

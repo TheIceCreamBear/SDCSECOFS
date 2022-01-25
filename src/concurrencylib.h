@@ -59,9 +59,6 @@ typedef struct CSMutex {
 } CSMutex;
 
 //Lists used to track all threads and semaphores
-CSSem* vizconThreadSem; //Blocks createthread threads, released by waitforcompletion/waitforreturn. Count used for number of threads created
-CSThread* vizconCobeginList; // List of all cobegin threads
-CSThread* vizconCobeginListInitial;
 CSThread* vizconThreadList; //Linked list of all threads
 CSThread* vizconThreadListInitial;
 CSSem* vizconSemList; //Linked list of all semaphores
@@ -69,12 +66,11 @@ CSSem* vizconSemListInitial;
 CSMutex* vizconMutexList; //Linked list of all mutexes
 CSMutex* vizconMutexListInitial;
 
-//Thread functions
-CSThread* cobeginThread(void* arg);
-THREAD_RET createThread(void* arg);
-void joinThread(CSThread* thread);
-void freeCSThread(CSThread* thread);
-void sleepThread(int milliseconds);
+//Thread functions 
+CSThread* threadCreate(void* arg);
+void threadStart(CSThread* thread);
+void threadJoin(CSThread* thread);
+void threadClose(CSThread* thread);
 
 //Semaphore functions
 CSSem* semCreate(SEM_NAME name, SEM_VALUE maxValue);
@@ -94,7 +90,7 @@ int mutexStatus(CSMutex* mutex);
 
 //Other functions
 void vizconAbort();
-void vizconError(int func, int err);
+void vizconError(char* func, int err);
 void vizconFree();
 
 #endif

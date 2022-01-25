@@ -6,9 +6,10 @@
 #define vcMutex CSMutex
 
 //Thread functions
-void vcCobegin(threadFunc func, void* arg);
-void vcWaitForCompletion();
-THREAD_RET* vcWaitForReturn();
+void vcThreadAdd(threadFunc func, void* arg);
+void vcThreadStart();
+THREAD_RET* vcThreadReturn();
+void vcThreadSleep(int milliseconds);
 
 //Semaphore functions
 vcSem* vcSemCreate(char* name, int count);

@@ -1,128 +1,91 @@
 #include "concurrencylib.h"
 
-//Create a thread instance of the createThread function
-CSThread* cobeginThread(void* arg)
-{
-    CSThread* thread = (CSThread*)malloc(sizeof(CSThread));
-    if(thread == NULL) 
-    {
-        vizconError(0, 8);
-    }
-    thread->next = NULL;
-    #if defined(_WIN32) // windows
-    thread->thread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)createThread, arg, 0, &(thread->id));
-    if(thread->thread == NULL)
-    {
-        int err = (int)GetLastError();
-        free(thread);
-        vizconError(0, err);
-    }
-    #elif defined(__APPLE__) || defined(__linux__)
-    int err = pthread_create(&thread->thread, NULL, createThread, arg);
-    if(err)
-    {
-        free(thread);
-        vizconError(0, err);
-    }
-    #endif
-    return thread;
-}
-
 //Create a CSThread that does not start until WaitForCompletion or WaitForReturn is called
 //arg parameter must have funcion at head of array
-THREAD_RET createThread(void* arg) {
+CSThread* threadCreate(void* arg) 
+{
     CSThread* thread = (CSThread*)malloc(sizeof(CSThread));
     if (thread == NULL) 
     {
-        vizconError(0, 8);
+        vizconError("vcThreadAdd", 8);
     }
     thread->next = NULL;
     void** arr = (void**)arg;
-    semWait(vizconThreadSem);
     #if defined(_WIN32) // windows
-    thread->thread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)arr[0], arr[1], 0, &(thread->id));
+    thread->thread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)arr[0], arr[1], CREATE_SUSPENDED, &(thread->id));
     if(thread->thread == NULL)
     {
         int err = (int)GetLastError();
         free(thread);
-        vizconError(0, err);
+        free(arg);
+        vizconError("vcThreadAdd", err);
     }
     #elif defined(__APPLE__) || defined(__linux__)
     int err = pthread_create(&thread->thread, NULL, arr[0], arr[1]);
     if(err)
     {
         free(thread);
-        vizconError(0, err);
+        vizconError("vcThreadAdd", err);
     }
     #endif
-    if(vizconThreadListInitial == NULL)
-    {
-        vizconThreadList = thread;
-        vizconThreadListInitial = thread;
-    }
-    else
-    {
-        vizconThreadList->next = thread;
-        vizconThreadList = thread;
-    }
-    semSignal(vizconThreadSem);
-    free(arg);
-    return (THREAD_RET)1;
+    return thread;
+}
+
+//Start a given thread that was in a suspended state
+void threadStart(CSThread* thread)
+{
+    #if defined(_WIN32) // windows
+    ResumeThread(thread->thread);
+    #elif defined(__APPLE__) || defined(__linux__)
+    printf("lol");
+    #endif
 }
 
  //Waits for thread to complete before being joined back into main function
-void joinThread(CSThread* thread) {
+void threadJoin(CSThread* thread) 
+{
     #if defined(_WIN32) // windows
     DWORD ret = WaitForSingleObject(thread->thread, INFINITE);
     if(ret == WAIT_FAILED)
     {
-        vizconError(1, GetLastError());
+        vizconError("vcThreadStart/vcThreadReturn", GetLastError());
     }
     else if(ret == WAIT_OBJECT_0)
     {
         if(!GetExitCodeThread(thread->thread, &thread->returnVal))
         {
-            vizconError(1, GetLastError());
+            vizconError("vcThreadStart/vcThreadReturn", GetLastError());
         }
     }
     else if(ret == WAIT_ABANDONED)
     {
-        vizconError(1, 500);
+        vizconError("vcThreadStart/vcThreadReturn", 500);
     }
     else if (ret == WAIT_TIMEOUT)
     {
-        vizconError(1, 501);
+        vizconError("vcThreadStart/vcThreadReturn", 501);
     }
     #elif defined(__APPLE__) || defined(__linux__)
     int err = pthread_join(thread->thread, &thread->returnVal);
     if(err)
     {
         free(thread);
-        vizconError(1, err);
+        vizconError("vcThreadStart/vcThreadReturn", err);
     }
     #endif
 }
 
 //Frees all data associated with a CSThread type, including itself
-void freeCSThread(CSThread* thread) {
+void threadClose(CSThread* thread) 
+{
     #ifdef _WIN32
     if(!CloseHandle(thread->thread))
     {
-        vizconError(1, GetLastError());
+        vizconError("vcThreadStart/vcThreadReturn", GetLastError());
     }
     free(thread);
     #else
     free(thread);
-    #endif
-}
-
-//Puts the current thread to sleep for specified amount of time in milliseconds
-void sleepThread(int milliseconds)
-{
-    #ifdef _WIN32
-    Sleep(milliseconds);
-    #else
-    usleep(milliseconds*1000);
     #endif
 }
 
@@ -135,7 +98,7 @@ CSSem* semCreate(SEM_NAME name, SEM_VALUE maxValue)
     }
     CSSem* sem = (CSSem*)malloc(sizeof(CSSem));
     if (sem == NULL) {
-        vizconError(3, 8);
+        vizconError("vcSemCreate", 8);
     }
     sem->next = NULL;
     #if defined(_WIN32) // windows
@@ -144,7 +107,7 @@ CSSem* semCreate(SEM_NAME name, SEM_VALUE maxValue)
     {
         int err = (int)GetLastError();
         free(sem);
-        vizconError(3, err);
+        vizconError("vcSemCreate", err);
     }
     sem->count = maxValue;
     #elif defined(__linux__) || defined(__APPLE__)
@@ -152,12 +115,12 @@ CSSem* semCreate(SEM_NAME name, SEM_VALUE maxValue)
     if(sem->sem == SEM_FAILED)
     {
         free(sem);
-        vizconError(3, errno);
+        vizconError("vcSemCreate", errno);
     }
     if(sem_unlink(name))
     {
         free(sem);
-        vizconError(3, errno);
+        vizconError("vcSemCreate", errno);
     }
     sem->count = maxValue;
     #endif
@@ -170,13 +133,13 @@ void semSignal(CSSem* sem)
     #if defined(_WIN32) // windows
     if(!ReleaseSemaphore(sem->sem, 1, NULL))
     {
-        vizconError(6, GetLastError());
+        vizconError("vcSemSignal", GetLastError());
     }
     sem->count = sem->count + 1;
     #elif defined(__linux__) || defined(__APPLE__)
     if(sem_post(sem->sem))
     {
-        vizconError(6, errno);
+        vizconError("vcSemSignal", errno);
     }
     sem->count = sem->count + 1;
     #endif
@@ -189,7 +152,7 @@ void semWait(CSSem* sem)
     DWORD ret = WaitForSingleObject(sem->sem, INFINITE);
     if(ret == WAIT_FAILED)
     {
-        vizconError(4, GetLastError());
+        vizconError("vcSemWait", GetLastError());
     }
     else if(ret == WAIT_OBJECT_0)
     {
@@ -197,16 +160,16 @@ void semWait(CSSem* sem)
     }
     else if(ret == WAIT_ABANDONED)
     {
-        vizconError(4, 500);
+        vizconError("vcSemWait", 500);
     }
     else if (ret == WAIT_TIMEOUT)
     {
-        vizconError(4, 501);
+        vizconError("vcSemWait", 501);
     }
     #elif defined(__linux__) || defined(__APPLE__)
     if(sem_wait(sem->sem))
     {
-        vizconError(4, errno);
+        vizconError("vcSemWait", errno);
     }
     #endif
 }
@@ -220,7 +183,7 @@ int semTryWait(CSSem* sem)
     DWORD ret = WaitForSingleObject(sem->sem, 0);
     if(ret == WAIT_FAILED)
     {
-        vizconError(5, GetLastError());
+        vizconError("vcSemTryWait", GetLastError());
     }
     else if(ret == WAIT_OBJECT_0)
     {
@@ -229,7 +192,7 @@ int semTryWait(CSSem* sem)
     }
     else if(ret == WAIT_ABANDONED)
     {
-        vizconError(5, 500);
+        vizconError("vcSemTryWait", 500);
     }
     #elif defined(__linux__) || defined(__APPLE__)
     if(!sem_trywait(sem->sem))
@@ -239,7 +202,7 @@ int semTryWait(CSSem* sem)
     }
     else if(errno != EAGAIN)
     {
-        vizconError(5, errno);
+        vizconError("vcSemTryWait", errno);
     }
     #endif
     return 0;
@@ -257,13 +220,13 @@ void semClose(CSSem* sem)
     #if defined(_WIN32) // windows
     if(!CloseHandle(sem->sem))
     {
-        vizconError(1, GetLastError());
+        vizconError("vcSemClose", GetLastError());
     }
     free(sem);
     #elif defined(__linux__) || defined(__APPLE__)
     if(sem_close(sem->sem))
     {
-        vizconError(1, errno);
+        vizconError("vcSemClose", errno);
     }
     free(sem);
     #endif
@@ -278,7 +241,7 @@ CSMutex* mutexCreate(char* name)
     }
     CSMutex* mutex = (CSMutex*)malloc(sizeof(CSMutex));
     if(mutex == NULL) {
-        vizconError(8, 8);
+        vizconError("vcMutexCreate", 8);
     }
     mutex->next = NULL;
     #if defined(_WIN32) // windows
@@ -287,20 +250,20 @@ CSMutex* mutexCreate(char* name)
     {
         int err = (int)GetLastError();
         free(mutex);
-        vizconError(8, err);
+        vizconError("vcMutexCreate", err);
     }
     #elif defined(__linux__) || defined(__APPLE__)
     mutex->mutex = (pthread_mutex_t*)malloc(sizeof(pthread_mutex_t));
     if(mutex->mutex == NULL) {
         free(mutex);
-        vizconError(8, 8);
+        vizconError("vcMutexCreate", 8);
     }
     int err = pthread_mutex_init(mutex->mutex, NULL);
     if(err)
     {
         free(mutex->mutex);
         free(mutex);
-        vizconError(8, errno);
+        vizconError("vcMutexCreate", errno);
     }
     #endif
     return mutex;
@@ -313,21 +276,21 @@ void mutexLock(CSMutex* mutex)
     DWORD ret = WaitForSingleObject(mutex->mutex, INFINITE);
     if(ret == WAIT_FAILED)
     {
-        vizconError(9, GetLastError());
+        vizconError("vcMutexLock", GetLastError());
     }
     else if(ret == WAIT_ABANDONED)
     {
-        vizconError(9, 500);
+        vizconError("vcMutexLock", 500);
     }
     else if (ret == WAIT_TIMEOUT)
     {
-        vizconError(9, 501);
+        vizconError("vcMutexLock", 501);
     }
     #elif defined(__linux__) || defined(__APPLE__)
     int err = pthread_mutex_lock(mutex->mutex);
     if(err)
     {
-        vizconError(9, err);
+        vizconError("vcMutexLock", err);
     }
     #endif
 }
@@ -341,7 +304,7 @@ int mutexTryLock(CSMutex* mutex)
     DWORD ret = WaitForSingleObject(mutex->mutex, 0);
     if(ret == WAIT_FAILED)
     {
-        vizconError(10, GetLastError());
+        vizconError("vcMutexTryLock", GetLastError());
     }
     else if(ret == WAIT_OBJECT_0)
     {
@@ -349,7 +312,7 @@ int mutexTryLock(CSMutex* mutex)
     }
     else if(ret == WAIT_ABANDONED)
     {
-        vizconError(10, 500);
+        vizconError("vcMutexTryLock", 500);
     }
     #elif defined(__linux__) || defined(__APPLE__)
     int err = pthread_mutex_trylock(mutex->mutex);
@@ -361,7 +324,7 @@ int mutexTryLock(CSMutex* mutex)
     {
         if(err != EBUSY)
         {
-            vizconError(10, err);
+            vizconError("vcMutexTryLock", err);
         }
     }
     #endif
@@ -374,13 +337,13 @@ void mutexUnlock(CSMutex* mutex)
     #if defined(_WIN32) // windows
     if(!ReleaseMutex(mutex->mutex))
     {
-        vizconError(11, GetLastError());
+        vizconError("vcMutexUnlock", GetLastError());
     }
     #elif defined(__linux__) || defined(__APPLE__)
     int err = pthread_mutex_unlock(mutex->mutex);
     if(err) 
     {
-        vizconError(11, err);
+        vizconError("vcMutexUnlock", err);
     }
     #endif
 }
@@ -391,14 +354,14 @@ void mutexClose(CSMutex* mutex)
     #if defined(_WIN32) // windows
     if(!CloseHandle(mutex->mutex))
     {
-        vizconError(1, GetLastError());
+        vizconError("vcMutexClose", GetLastError());
     }
     free(mutex);
     #elif defined(__linux__) || defined(__APPLE__)
     int err = pthread_mutex_destroy(mutex->mutex);
     if(err) 
     {
-        vizconError(1, err);
+        vizconError("vcMutexClose", err);
     }
     free(mutex->mutex);
     free(mutex);
@@ -426,83 +389,10 @@ int mutexStatus(CSMutex* mutex)
 }
 
 //Handles error from concurrencylib and vcuserlibrary
-void vizconError(int func, int err)
+void vizconError(char* func, int err)
 {
-    semWait(vizconThreadSem->next);
     vizconAbort();
-    printf("\nError from ");
-    switch(func)
-    {
-        case 0:
-        {
-            printf("vcCobegin\n");
-            break;
-        }
-        case 1:
-        {
-            printf("vcWaitForCompletion\n");
-            break;
-        }
-        case 2:
-        {
-            printf("vcWaitForReturn\n");
-            break;
-        }
-        case 3:
-        {
-            printf("vcSemCreate\n");
-            break;
-        }
-        case 4:
-        {
-            printf("vcSemWait\n");
-            break;
-        }
-        case 5:
-        {
-            printf("vcSemTryWait\n");
-            break;
-        }
-        case 6:
-        {
-            printf("vcSemSignal\n");
-            break;
-        }
-        case 7:
-        {
-            printf("vcSemValue\n");
-            break;
-        }
-        case 8:
-        {
-            printf("vcMutexCreate\n");
-            break;
-        }
-        case 9:
-        {
-            printf("vcMutexLock\n");
-            break;
-        }
-        case 10:
-        {
-            printf("vcMutexTryLock\n");
-            break;
-        }
-        case 11:
-        {
-            printf("vcMutexUnlock\n");
-            break;
-        }
-        case 12:
-        {
-            printf("vcMutexStatus\n");
-            break;
-        }
-        default:
-        {
-            printf("unknown function\n");
-        }
-    }
+    printf("\nError from %s\n", func);
     #if defined(_WIN32) // windows
     LPSTR message;
     if(err < 500)
@@ -549,32 +439,19 @@ void vizconAbort()
     #if defined(_WIN32) // windows
     DWORD dwExitCode = 0;
     DWORD id = GetCurrentThreadId();
-    while(vizconCobeginListInitial != NULL)
-    {
-        if(vizconCobeginListInitial->id != id)
-        {
-            TerminateThread(vizconCobeginListInitial->thread, dwExitCode);
-        }
-        vizconCobeginListInitial = vizconCobeginListInitial->next;
-    }
+    printf("thread is %d\n", id);
     while(vizconThreadListInitial != NULL)
     {
+        printf("found %d\n", vizconThreadListInitial->id);
         if(vizconThreadListInitial->id != id)
         {
+            printf("using %d\n", vizconThreadListInitial->id);
             TerminateThread(vizconThreadListInitial->thread, dwExitCode);
         }
         vizconThreadListInitial = vizconThreadListInitial->next;
     }
     #elif defined(__linux__) || defined(__APPLE__)
     int id = pthread_self();
-    while(vizconCobeginListInitial != NULL)
-    {
-        if((int)vizconCobeginListInitial->thread != id)
-        {
-            pthread_cancel(vizconCobeginListInitial->thread);
-        }
-        vizconCobeginListInitial = vizconCobeginListInitial->next;
-    }
     while(vizconThreadListInitial != NULL)
     {
         if((int)vizconThreadListInitial->thread != id)
@@ -591,19 +468,11 @@ void vizconAbort()
 //Free all vizcon data
 void vizconFree()
 {
-    //free all cobegin thread
-    while(vizconCobeginListInitial != NULL)
-    {
-        vizconCobeginList = vizconCobeginListInitial->next;
-        freeCSThread(vizconCobeginListInitial);
-        vizconCobeginListInitial = vizconCobeginList;
-    }
-
     //free all user threads
     while(vizconThreadListInitial != NULL)
     {
         vizconThreadList = vizconThreadListInitial->next;
-        freeCSThread(vizconThreadListInitial);
+        threadClose(vizconThreadListInitial);
         vizconThreadListInitial = vizconThreadList;
     }
 
@@ -614,8 +483,6 @@ void vizconFree()
         semClose(vizconSemListInitial);
         vizconSemListInitial = vizconSemList;
     }
-    semClose(vizconThreadSem->next);
-    semClose(vizconThreadSem);
 
     //Free all mutex locks
     while(vizconMutexListInitial != NULL)

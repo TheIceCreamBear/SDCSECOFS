@@ -91,11 +91,11 @@ int main(void) {
     fork4 = vcSemCreate("fork4", 1);
     fork5 = vcSemCreate("fork5", 1);
     room = vcSemCreate("room", 4);
-    vcThreadAdd(Phil1, (void*)"P1");
-    vcThreadAdd(Phil2, (void*)"P2");
-    vcThreadAdd(Phil3, (void*)"P3");
-    vcThreadAdd(Phil4, (void*)"P4");
-    vcThreadAdd(Phil5, (void*)"P5");
+    vcThreadQueue(Phil1, (void*)"P1");
+    vcThreadQueue(Phil2, (void*)"P2");
+    vcThreadQueue(Phil3, (void*)"P3");
+    vcThreadQueue(Phil4, (void*)"P4");
+    vcThreadQueue(Phil5, (void*)"P5");
     //vcThreadStart();
     THREAD_RET* arr = vcThreadReturn();
     int i; 

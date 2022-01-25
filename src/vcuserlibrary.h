@@ -18,7 +18,7 @@ CSMutex* vizconMutexList; //Linked list of all mutexes
 CSMutex* vizconMutexListInitial;
 
 //Thread functions
-void vcThreadAdd(threadFunc func, void* arg);
+void vcThreadQueue(threadFunc func, void* arg);
 void vcThreadStart();
 THREAD_RET* vcThreadReturn();
 void vcThreadSleep(int milliseconds);

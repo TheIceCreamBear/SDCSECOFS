@@ -7,7 +7,7 @@ CSThread* threadCreate(void* arg)
     CSThread* thread = (CSThread*)malloc(sizeof(CSThread));
     if (thread == NULL) 
     {
-        vizconError("vcThreadAdd", 8);
+        vizconError("vcThreadQueue", 8);
     }
     thread->next = NULL;
     void** arr = (void**)arg;
@@ -18,7 +18,7 @@ CSThread* threadCreate(void* arg)
         int err = (int)GetLastError();
         free(thread);
         free(arg);
-        vizconError("vcThreadAdd", err);
+        vizconError("vcThreadQueue", err);
     }
     #elif defined(__APPLE__) || defined(__linux__)
     thread->func = arr[0];
@@ -40,7 +40,7 @@ void threadStart(CSThread* thread)
     if(err)
     {
         free(thread);
-        vizconError("vcThreadAdd", err);
+        vizconError("vcThreadQueue", err);
     }
     #endif
 }

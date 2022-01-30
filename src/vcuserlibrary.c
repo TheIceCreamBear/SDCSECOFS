@@ -4,11 +4,7 @@
 //Threads do not begin until vcWaitForCompletion or vcWaitForReturn is called
 void vcThreadQueue(threadFunc func, void* arg)
 {
-    void** arr = (void**)malloc(sizeof(void*)*2);
-    arr[0] = func;
-    arr[1] = arg;
-    CSThread* thread = threadCreate((void*)arr);
-    free(arr);
+    CSThread* thread = threadCreate(func, arg);
     if(vizconThreadListInitial == NULL)
     {
         vizconThreadList = thread;

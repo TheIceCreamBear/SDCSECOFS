@@ -9,7 +9,7 @@ CSMutex* mutexCreate(char* name)
     }
     CSMutex* mutex = (CSMutex*)malloc(sizeof(CSMutex));
     if(mutex == NULL) {
-        vizconError("vcMutexCreate", 8);
+        vizconError("vcMutexCreate", 502);
     }
     mutex->next = NULL;
     #if defined(_WIN32) // windows
@@ -24,7 +24,7 @@ CSMutex* mutexCreate(char* name)
     mutex->mutex = (pthread_mutex_t*)malloc(sizeof(pthread_mutex_t));
     if(mutex->mutex == NULL) {
         free(mutex);
-        vizconError("vcMutexCreate", 8);
+        vizconError("vcMutexCreate", 502);
     }
     int err = pthread_mutex_init(mutex->mutex, NULL);
     if(err)

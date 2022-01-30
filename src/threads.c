@@ -7,7 +7,7 @@ CSThread* threadCreate(threadFunc func, void* arg)
     CSThread* thread = (CSThread*)malloc(sizeof(CSThread));
     if (thread == NULL) 
     {
-        vizconError("vcThreadQueue", 8);
+        vizconError("vcThreadQueue", 502);
     }
     thread->next = NULL;
     #if defined(_WIN32) // windows

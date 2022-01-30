@@ -84,7 +84,8 @@ THREAD_RET Phil5(THREAD_PARAM param)
     return (THREAD_RET)1;
 }
 
-int main(void) {
+int main(void) 
+{
     fork1 = vcSemCreate("fork1", 1);
     fork2 = vcSemCreate("fork2", 1);
     fork3 = vcSemCreate("fork3", 1);

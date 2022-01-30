@@ -9,7 +9,7 @@ CSSem* semCreate(SEM_NAME name, SEM_VALUE maxValue)
     }
     CSSem* sem = (CSSem*)malloc(sizeof(CSSem));
     if (sem == NULL) {
-        vizconError("vcSemCreate", 8);
+        vizconError("vcSemCreate", 502);
     }
     sem->next = NULL;
     #if defined(_WIN32) // windows

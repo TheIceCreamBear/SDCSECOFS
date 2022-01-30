@@ -36,6 +36,11 @@ void vizconError(char* func, int err)
                 message = "An unexpected wait timeout occurred.";
                 break;
             }
+            case 502:
+            {
+                message = "Not enough memory resources are available to process this command.";
+                break;
+            }
             default:
             {
                 message = "An unknown error has occurred.";

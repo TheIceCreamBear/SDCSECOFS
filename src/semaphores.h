@@ -16,6 +16,7 @@
 typedef struct CSSem {
     SEM_TYPE sem;
     char* name;
+    int num;
     SEM_VALUE count;
     struct CSSem* next;
 } CSSem;

@@ -12,6 +12,8 @@ CSMutex* mutexCreate(char* name)
         vizconError("vcMutexCreate", 502);
     }
     mutex->next = NULL;
+    mutex->name = name;
+    mutex->num = -1;
     #if defined(_WIN32) // windows
     mutex->mutex = CreateMutexA(NULL, FALSE, name);
     if(mutex->mutex == NULL)

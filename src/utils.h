@@ -4,7 +4,6 @@
 //universal libraries
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #ifdef _WIN32 // window's libraries and definitions
     #include <windows.h>
 #elif __linux__ || __APPLE__ //Linux and MacOS's libraries and definitions
@@ -13,6 +12,8 @@
 #endif
 
 //Other functions
+char* vizconCreateName(int type, int value);
+int vizconStringLength(char* name);
 void vizconAbort();
 void vizconError(char* func, int err);
 void vizconFree();

@@ -20,6 +20,7 @@ typedef struct CSThread
 {
     THREAD_TYPE thread;
     char* name;
+    int num;
     #if defined(_WIN32) // windows
         THREAD_RET id;
     #elif defined(__APPLE__) || defined(__linux__)

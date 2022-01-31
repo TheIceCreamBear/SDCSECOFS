@@ -10,6 +10,7 @@
 typedef struct CSMutex {
     MUTEX_TYPE mutex;
     char* name;
+    int num;
     struct CSMutex* next;
 } CSMutex;
 

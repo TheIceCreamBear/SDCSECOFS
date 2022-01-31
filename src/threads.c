@@ -10,6 +10,8 @@ CSThread* threadCreate(threadFunc func, void* arg)
         vizconError("vcThreadQueue", 502);
     }
     thread->next = NULL;
+    thread->name = NULL;
+    thread->num = -1;
     #if defined(_WIN32) // windows
     thread->thread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)func, arg, CREATE_SUSPENDED, &(thread->id));
     if(thread->thread == NULL)
@@ -42,6 +44,7 @@ void threadStart(CSThread* thread)
         vizconError("vcThreadQueue", err);
     }
     #endif
+    
 }
 
  //Waits for thread to complete before being joined back into main function

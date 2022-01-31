@@ -1,14 +1,16 @@
 #include "utils.h"
 
 #ifdef _WIN32 // window's libraries and definitions
-#define MUTEX_TYPE HANDLE
+    #define MUTEX_TYPE HANDLE
 #elif __linux__ || __APPLE__ //Linux and MacOS's libraries and definitions
-#define MUTEX_TYPE pthread_mutex_t*
+    #define MUTEX_TYPE pthread_mutex_t*
 #endif
 
 // concurrency simulator mutex structure
 typedef struct CSMutex {
     MUTEX_TYPE mutex;
+    char* name;
+    int num;
     struct CSMutex* next;
 } CSMutex;
 

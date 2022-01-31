@@ -84,13 +84,14 @@ THREAD_RET Phil5(THREAD_PARAM param)
     return (THREAD_RET)1;
 }
 
-int main(void) {
-    fork1 = vcSemCreate("fork1", 1);
-    fork2 = vcSemCreate("fork2", 1);
-    fork3 = vcSemCreate("fork3", 1);
-    fork4 = vcSemCreate("fork4", 1);
-    fork5 = vcSemCreate("fork5", 1);
-    room = vcSemCreate("room", 4);
+int main(void) 
+{
+    fork1 = vcSemCreate(1);
+    fork2 = vcSemCreate(1);
+    fork3 = vcSemCreate(1);
+    fork4 = vcSemCreate(1);
+    fork5 = vcSemCreate(1);
+    room = vcSemCreate(4);
     vcThreadQueue(Phil1, (void*)"P1");
     vcThreadQueue(Phil2, (void*)"P2");
     vcThreadQueue(Phil3, (void*)"P3");

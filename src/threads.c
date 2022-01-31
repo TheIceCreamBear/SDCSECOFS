@@ -2,17 +2,18 @@
 
 //Create a CSThread that does not start until WaitForCompletion or WaitForReturn is called
 //arg parameter must have funcion at head of array
-CSThread* threadCreate(void* arg) 
+CSThread* threadCreate(threadFunc func, void* arg) 
 {
     CSThread* thread = (CSThread*)malloc(sizeof(CSThread));
     if (thread == NULL) 
     {
-        vizconError("vcThreadQueue", 8);
+        vizconError("vcThreadQueue", 502);
     }
     thread->next = NULL;
-    void** arr = (void**)arg;
+    thread->name = NULL;
+    thread->num = -1;
     #if defined(_WIN32) // windows
-    thread->thread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)arr[0], arr[1], CREATE_SUSPENDED, &(thread->id));
+    thread->thread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)func, arg, CREATE_SUSPENDED, &(thread->id));
     if(thread->thread == NULL)
     {
         int err = (int)GetLastError();
@@ -21,8 +22,8 @@ CSThread* threadCreate(void* arg)
         vizconError("vcThreadQueue", err);
     }
     #elif defined(__APPLE__) || defined(__linux__)
-    thread->func = arr[0];
-    thread->arg = arr[1];
+    thread->func = func;
+    thread->arg = arg;
     #endif
     return thread;
 }
@@ -43,6 +44,7 @@ void threadStart(CSThread* thread)
         vizconError("vcThreadQueue", err);
     }
     #endif
+    
 }
 
  //Waits for thread to complete before being joined back into main function

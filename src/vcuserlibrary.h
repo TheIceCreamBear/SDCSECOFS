@@ -19,19 +19,22 @@ CSMutex* vizconMutexListInitial;
 
 //Thread functions
 void vcThreadQueue(threadFunc func, void* arg);
+void vcThreadQueueNamed(threadFunc func, void* arg, char* name);
 void vcThreadStart();
 THREAD_RET* vcThreadReturn();
 void vcThreadSleep(int milliseconds);
 
 //Semaphore functions
-vcSem* vcSemCreate(char* name, int count);
+vcSem* vcSemCreate(int count);
+vcSem* vcSemCreateNamed(int count, char* name);
 void vcSemWait(vcSem* sem);
 int vcSemTryWait(vcSem* sem);
 void vcSemSignal(vcSem* sem);
 int vcSemValue(vcSem* sem);
 
 //Mutex functions
-vcMutex* vcMutexCreate(char* name);
+vcMutex* vcMutexCreate();
+vcMutex* vcMutexCreateNamed(char* name);
 void vcMutexLock(vcMutex* mutex);
 int vcMutexTrylock(vcMutex* mutex);
 void vcMutexUnlock(vcMutex* mutex);

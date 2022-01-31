@@ -8,10 +8,13 @@ CSSem* semCreate(SEM_NAME name, SEM_VALUE maxValue)
         return NULL;
     }
     CSSem* sem = (CSSem*)malloc(sizeof(CSSem));
-    if (sem == NULL) {
-        vizconError("vcSemCreate", 8);
+    if (sem == NULL) 
+    {
+        vizconError("vcSemCreate", 502);
     }
     sem->next = NULL;
+    sem->name = (char*)name;
+    sem->num = -1;
     #if defined(_WIN32) // windows
     sem->sem = CreateSemaphoreA(NULL, maxValue, maxValue, name);
     if(sem->sem == NULL)

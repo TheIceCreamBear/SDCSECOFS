@@ -1,6 +1,51 @@
 #include "utils.h"
 #include "vcuserlibrary.h"
 
+//Creates a name for a concurrency structure
+char* vizconCreateName(int type, int value)
+{
+    int i = 1, temp = value/10;
+    while(temp != 0)
+    {
+        i++;
+        temp = temp / 10;
+    }
+    char* ret = (char*)malloc(sizeof(char) * (11+i));
+    if(ret == NULL)
+    {
+        vizconError("create function", 502);
+    }
+    switch(type)
+    {
+        case 0:
+        {
+            sprintf(ret, "Thread %d", value);
+            return ret;
+        }
+        case 1:
+        {
+            sprintf(ret, "Semaphore %d", value);
+            return ret;
+        }
+        case 2:
+        {
+            sprintf(ret, "Mutex %d", value);
+            return ret;
+        }
+        default:
+        {
+            return NULL;
+        }
+    }
+}
+
+int vizconStringLength(char* name)
+{
+    int i;
+    for(i=0; name[i] != '\0'; i++);
+    return i;
+}
+
 //Handles error from concurrencylib and vcuserlibrary
 void vizconError(char* func, int err)
 {
@@ -34,6 +79,11 @@ void vizconError(char* func, int err)
             case 501:
             {
                 message = "An unexpected wait timeout occurred.";
+                break;
+            }
+            case 502:
+            {
+                message = "Not enough memory resources are available to process this command.";
                 break;
             }
             default:
@@ -82,6 +132,7 @@ void vizconFree()
     while(vizconThreadListInitial != NULL)
     {
         vizconThreadList = vizconThreadListInitial->next;
+        free(vizconThreadListInitial->name);
         threadClose(vizconThreadListInitial);
         vizconThreadListInitial = vizconThreadList;
     }
@@ -90,6 +141,7 @@ void vizconFree()
     while(vizconSemListInitial != NULL)
     {
         vizconSemList = vizconSemListInitial->next;
+        free(vizconSemListInitial->name);
         semClose(vizconSemListInitial);
         vizconSemListInitial = vizconSemList;
     }
@@ -98,6 +150,7 @@ void vizconFree()
     while(vizconMutexListInitial != NULL)
     {
         vizconMutexList = vizconMutexListInitial->next;
+        free(vizconMutexListInitial->name);
         mutexClose(vizconMutexListInitial);
         vizconMutexListInitial = vizconMutexList;
     }

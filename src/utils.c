@@ -1,5 +1,4 @@
 #include "utils.h"
-#include "vcuserlibrary.h"
 
 //Creates a name for a concurrency structure
 char* vizconCreateName(int type, int value)
@@ -49,21 +48,21 @@ int vizconStringLength(char* name)
 //Handles error from concurrencylib and vcuserlibrary
 void vizconError(char* func, int err)
 {
-    vizconAbort();
-    printf("\nError from %s\n", func);
+    char message[200];
+    sprintf(message, "\nError from %s.\n", func);
     #if defined(_WIN32) // windows
-    LPSTR message;
+    LPSTR errorMessage;
     if(err < 500)
     {
-        FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL, (DWORD)err, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPSTR)&message, 0, NULL);
-        printf("system error ");
+        FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL, (DWORD)err, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPSTR)&errorMessage, 0, NULL);
+        sprintf(message, "%ssystem error", message);
     }
     #elif defined(__linux__) || defined(__APPLE__)
-    char* message;
+    char* errorMessage;
     if(err < 500)
     {
-        message = strerror(err);
-        printf("errno ");
+        errorMessage = strerror(err);
+        sprintf(message, "%serrno", message);
     }
     #endif
     if(err >= 500)
@@ -73,85 +72,26 @@ void vizconError(char* func, int err)
         {
             case 500:
             {
-                message = "A thread terminated without releasing its mutex lock.";
+                errorMessage = "A thread terminated without releasing its mutex lock.";
                 break;
             }
             case 501:
             {
-                message = "An unexpected wait timeout occurred.";
+                errorMessage = "An unexpected wait timeout occurred.";
                 break;
             }
             case 502:
             {
-                message = "Not enough memory resources are available to process this command.";
+                errorMessage = "Not enough memory resources are available to process this command.";
                 break;
             }
             default:
             {
-                message = "An unknown error has occurred.";
+                errorMessage = "An unknown error has occurred.";
             }
         }
     }
-    printf("code %d: %s\n", err, message);
+    sprintf(message, "%s code %d: %s\n", message, err, errorMessage);
+    printf("%s", message);
     exit(0);
-}
-
-//Kill all threads and free all concurrency structures
-void vizconAbort()
-{
-    #if defined(_WIN32) // windows
-    DWORD dwExitCode = 0;
-    DWORD id = GetCurrentThreadId();
-    while(vizconThreadListInitial != NULL)
-    {
-        if(vizconThreadListInitial->id != id)
-        {
-            TerminateThread(vizconThreadListInitial->thread, dwExitCode);
-        }
-        vizconThreadListInitial = vizconThreadListInitial->next;
-    }
-    #elif defined(__linux__) || defined(__APPLE__)
-    int id = pthread_self();
-    while(vizconThreadListInitial != NULL)
-    {
-        if((int)vizconThreadListInitial->thread != id)
-        {
-            pthread_cancel(vizconThreadListInitial->thread);
-        }
-        vizconThreadListInitial = vizconThreadListInitial->next;
-    }
-    #endif
-
-    vizconFree();
-}
-
-//Free all vizcon data
-void vizconFree()
-{
-    //free all user threads
-    while(vizconThreadListInitial != NULL)
-    {
-        vizconThreadList = vizconThreadListInitial->next;
-        free(vizconThreadListInitial->name);
-        threadClose(vizconThreadListInitial);
-        vizconThreadListInitial = vizconThreadList;
-    }
-
-    //Free all semaphores
-    while(vizconSemListInitial != NULL)
-    {
-        vizconSemList = vizconSemListInitial->next;
-        free(vizconSemListInitial->name);
-        semClose(vizconSemListInitial);
-        vizconSemListInitial = vizconSemList;
-    }
-
-    //Free all mutex locks
-    while(vizconMutexListInitial != NULL)
-    {
-        vizconMutexList = vizconMutexListInitial->next;
-        free(vizconMutexListInitial->name);
-        mutexClose(vizconMutexListInitial);
-        vizconMutexListInitial = vizconMutexList;
-    }
 }

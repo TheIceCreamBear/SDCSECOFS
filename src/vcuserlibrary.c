@@ -71,7 +71,32 @@ void vcThreadStart()
         vizconThreadList = vizconThreadList->next;
     }
 
-    vizconFree();
+    //free all user threads
+    while(vizconThreadListInitial != NULL)
+    {
+        vizconThreadList = vizconThreadListInitial->next;
+        free(vizconThreadListInitial->name);
+        threadClose(vizconThreadListInitial);
+        vizconThreadListInitial = vizconThreadList;
+    }
+
+    //Free all semaphores
+    while(vizconSemListInitial != NULL)
+    {
+        vizconSemList = vizconSemListInitial->next;
+        free(vizconSemListInitial->name);
+        semClose(vizconSemListInitial);
+        vizconSemListInitial = vizconSemList;
+    }
+
+    //Free all mutex locks
+    while(vizconMutexListInitial != NULL)
+    {
+        vizconMutexList = vizconMutexListInitial->next;
+        free(vizconMutexListInitial->name);
+        mutexClose(vizconMutexListInitial);
+        vizconMutexListInitial = vizconMutexList;
+    }
 
     return;
 }
@@ -105,7 +130,32 @@ THREAD_RET* vcThreadReturn()
         vizconThreadList = vizconThreadList->next;
     }
 
-    vizconFree();
+    //free all user threads
+    while(vizconThreadListInitial != NULL)
+    {
+        vizconThreadList = vizconThreadListInitial->next;
+        free(vizconThreadListInitial->name);
+        threadClose(vizconThreadListInitial);
+        vizconThreadListInitial = vizconThreadList;
+    }
+
+    //Free all semaphores
+    while(vizconSemListInitial != NULL)
+    {
+        vizconSemList = vizconSemListInitial->next;
+        free(vizconSemListInitial->name);
+        semClose(vizconSemListInitial);
+        vizconSemListInitial = vizconSemList;
+    }
+
+    //Free all mutex locks
+    while(vizconMutexListInitial != NULL)
+    {
+        vizconMutexList = vizconMutexListInitial->next;
+        free(vizconMutexListInitial->name);
+        mutexClose(vizconMutexListInitial);
+        vizconMutexListInitial = vizconMutexList;
+    }
 
     return arr;
 }

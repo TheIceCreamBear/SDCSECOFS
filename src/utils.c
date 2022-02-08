@@ -1,5 +1,4 @@
 #include "utils.h"
-#include "vcuserlibrary.h"
 
 //Creates a name for a concurrency structure
 char* vizconCreateName(int type, int value)
@@ -63,7 +62,7 @@ void vizconError(char* func, int err)
     if(err < 500)
     {
         errorMessage = strerror(err);
-        printf("errno ");
+        sprintf(message, "%serrno", message);
     }
     #endif
     if(err >= 500)
@@ -95,35 +94,4 @@ void vizconError(char* func, int err)
     sprintf(message, "%s code %d: %s\n", message, err, errorMessage);
     printf("%s", message);
     exit(0);
-}
-
-//Free all vizcon data
-void vizconFree()
-{
-    //free all user threads
-    while(vizconThreadListInitial != NULL)
-    {
-        vizconThreadList = vizconThreadListInitial->next;
-        free(vizconThreadListInitial->name);
-        threadClose(vizconThreadListInitial);
-        vizconThreadListInitial = vizconThreadList;
-    }
-
-    //Free all semaphores
-    while(vizconSemListInitial != NULL)
-    {
-        vizconSemList = vizconSemListInitial->next;
-        free(vizconSemListInitial->name);
-        semClose(vizconSemListInitial);
-        vizconSemListInitial = vizconSemList;
-    }
-
-    //Free all mutex locks
-    while(vizconMutexListInitial != NULL)
-    {
-        vizconMutexList = vizconMutexListInitial->next;
-        free(vizconMutexListInitial->name);
-        mutexClose(vizconMutexListInitial);
-        vizconMutexListInitial = vizconMutexList;
-    }
 }

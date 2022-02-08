@@ -14,8 +14,6 @@
 //Other functions
 char* vizconCreateName(int type, int value);
 int vizconStringLength(char* name);
-void vizconAbort();
 void vizconError(char* func, int err);
-void vizconFree();
 
 #endif

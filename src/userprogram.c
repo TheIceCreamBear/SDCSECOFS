@@ -16,6 +16,7 @@ THREAD_RET Phil1(THREAD_PARAM param)
         vcSemSignal(fork2);
         vcSemSignal(fork1);
         vcSemSignal(room);
+        vizconError("lol", 0);
     }
     return (THREAD_RET)1;
 }

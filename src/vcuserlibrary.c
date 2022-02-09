@@ -22,6 +22,9 @@ void vcThreadQueue(threadFunc func, void* arg)
     return;
 }
 
+//Create a thread instance with arguments
+//Threads do not begin until vcWaitForCompletion or vcWaitForReturn is called
+//Takes additional third parameter for user to assign a name to this thread
 void vcThreadQueueNamed(threadFunc func, void* arg, char* name)
 {
     CSThread* thread = threadCreate(func, arg);
@@ -170,7 +173,8 @@ void vcThreadSleep(int milliseconds)
     #endif
 }
 
-//todo
+//Create a semaphore with a name and maximum permit count
+//All semaphores must have a name, and values must be an integer greater than zero
 vcSem* vcSemCreate(int count)
 {
     vcSem* sem;
@@ -193,6 +197,7 @@ vcSem* vcSemCreate(int count)
 
 //Create a semaphore with a name and maximum permit count
 //All semaphores must have a name, and values must be an integer greater than zero
+//Takes additional second parameter for user to assign a name to this semaphore
 vcSem* vcSemCreateNamed(int count, char* name)
 {
     char* mallocName = (char*)malloc(sizeof(char) * (vizconStringLength(name) + 1));
@@ -246,7 +251,7 @@ int vcSemValue(vcSem* sem)
     return semValue(sem);
 }
 
-//todo
+//Create a mutex lock in an unlocked state
 vcMutex* vcMutexCreate()
 {
     vcMutex* mutex;
@@ -267,6 +272,8 @@ vcMutex* vcMutexCreate()
     return mutex;
 }
 
+//Create a mutex lock in an unlocked state
+//Takes a parameter for users to assign a name to this mutex
 vcMutex* vcMutexCreateNamed(char* name)
 {
     char* mallocName = (char*)malloc(sizeof(char) * (vizconStringLength(name) + 1));
@@ -291,11 +298,14 @@ vcMutex* vcMutexCreateNamed(char* name)
     return mutex;
 }
 
+//Lock a mutex
 void vcMutexLock(vcMutex* mutex)
 {
     mutexLock(mutex);
 }
 
+//lock a mutex, or return immediately if it is not available
+//returns 1 if available, 0 if not
 int vcMutexTrylock(vcMutex* mutex)
 {
     if(mutexTryLock(mutex))
@@ -305,11 +315,14 @@ int vcMutexTrylock(vcMutex* mutex)
     return 0;
 }
 
+//unlock a mutex
 void vcMutexUnlock(vcMutex* mutex)
 {
     mutexUnlock(mutex);
 }
 
+//Check to see if a mutex is unlocked
+//Returns 1 of unlocked, 0 if locked
 int vcMutexStatus(vcMutex* mutex)
 {
     return mutexStatus(mutex);

@@ -228,6 +228,16 @@ void vcSemWait(vcSem* sem)
     semWait(sem);
 }
 
+//Consume a number of permits from a semaphore equal to a user-specified number, or wait until they are all available.
+void vcSemWaitMult(vcSem* sem, int num)
+{
+    int i;
+    for(i=0; i<num; i++)
+    {
+        semWait(sem);
+    }
+}
+
 //Consume one permit from a sempahore, or return immediately if none are available
 //Returns 1 if successful, else 0
 int vcSemTryWait(vcSem* sem)
@@ -239,10 +249,43 @@ int vcSemTryWait(vcSem* sem)
     return 0;
 }
 
+//Consume a number of permits from a sempahore equal to a user-specified number, or return immediately if all are not available
+//Returns 1 if successful, else 0
+int vcSemTryWaitMult(vcSem* sem, int num)
+{
+    int i;
+    if(vcSemValue(sem) < num)
+    {
+        return 0;
+    }
+    for(i=0; i<num; i++)
+    {
+        if(!vcSemTryWait(sem))
+        {
+            for(i=i; i>0; i--)
+            {
+                vcSemSignal(sem);
+            }
+            return 0;
+        }
+    }
+    return 1;
+}
+
 //Release one permit from a semaphore
 void vcSemSignal(vcSem* sem)
 {
     semSignal(sem);
+}
+
+//Release a number of permits from a sempahore equal to a user-specified number
+void vcSemSignalMult(vcSem* sem, int num)
+{
+    int i;
+    for(i=0; i<num; i++)
+    {
+        semSignal(sem);
+    }
 }
 
 //Return the current number of permits from semaphore

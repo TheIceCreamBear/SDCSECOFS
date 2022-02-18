@@ -63,6 +63,7 @@ void vizconError(char* func, int err)
     if(err < 500)
     {
         sprintf(message, "%serrno code %d", message, err);
+        errno = err; 
         perror(message);
         exit(0);
     }
@@ -92,7 +93,6 @@ void vizconError(char* func, int err)
                 errorMessage = "An unknown error has occurred.";
             }
         }
-
     }
     sprintf(message, "%s code %d: %s\n", message, err, errorMessage);
     printf("%s", message);

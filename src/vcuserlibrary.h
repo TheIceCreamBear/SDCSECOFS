@@ -28,8 +28,11 @@ void vcThreadSleep(int milliseconds);
 vcSem* vcSemCreate(int count);
 vcSem* vcSemCreateNamed(int count, char* name);
 void vcSemWait(vcSem* sem);
+void vcSemWaitMult(vcSem* sem, int num);
 int vcSemTryWait(vcSem* sem);
+int vcSemTryWaitMult(vcSem* sem, int num);
 void vcSemSignal(vcSem* sem);
+void vcSemSignalMult(vcSem* sem, int num);
 int vcSemValue(vcSem* sem);
 
 //Mutex functions

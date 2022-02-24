@@ -1,109 +1,108 @@
 // meta: the following 2 lines would not be in their source code, but appended by us before calling the compiler
 #include "vcuserlibrary.h"
 
-vcSem *fork1, *fork2, *fork3, *fork4, *fork5, *room;
-int m = 20;
+#define accountCount 4
 
-THREAD_RET Phil1(THREAD_PARAM param)
+vcSem **accountSemArray;
+vcSem *semPrint;
+vcSem *tellerSem;
+vcSem * mainSem;
+int accountArray[accountCount];
+int j;
+
+void DisplayBalance(int teller, int accountNum, int balance)
 {
-    int i;
-    for(i=0; i<m; i++)
+    vcSemWait(semPrint);
+    printf("Teller %d says that account number %d has a balance of %d\n", teller, accountNum, balance);
+    vcSemSignal(semPrint);
+}
+
+void DisplayError(int teller, int accountNum, int amount)
+{
+    vcSemWait(semPrint);
+    printf("Teller %d says that account number %d cannot withdraw %d\n", teller, accountNum, amount);
+    vcSemSignal(semPrint);
+}
+
+void AddSalary(int accountNum, int amount)
+{
+    vcSemWait(accountSemArray[accountNum]);
+    accountArray[accountNum] = accountArray[accountNum] + amount;
+    vcSemSignal(accountSemArray[accountNum]);
+}
+
+int Withdraw(int accountNum, int amount)
+{
+    vcSemWait(accountSemArray[accountNum]);
+    if(amount <= accountArray[accountNum])
     {
-        vcSemWait(room);
-        vcSemWait(fork1);
-        vcSemWait(fork2);
-        printf("%s is eating: loop %d\n", (char*)param, i);
-        vcSemSignal(fork2);
-        vcSemSignal(fork1);
-        vcSemSignal(room);
+        accountArray[accountNum] = accountArray[accountNum] - amount;
+        vcSemSignal(accountSemArray[accountNum]);
+        return 1;
+    }
+    vcSemSignal(accountSemArray[accountNum]);
+    return 0;
+}
+
+THREAD_RET Teller(THREAD_PARAM param)
+{
+    int accountNum, amount, teller = (int)param;
+    srand(abs(vcThreadId()));
+    while(TRUE)
+    {
+        vcSemWait(tellerSem);
+        accountNum = rand() % accountCount;
+        if(rand() % 2)
+        {
+            amount = rand() % 300;
+            if(Withdraw(accountNum, amount))
+            {
+                DisplayBalance(teller, accountNum, accountArray[accountNum]);
+            }
+            else
+            {
+                DisplayError(teller, accountNum, amount);
+            }
+        }
+        else
+        {
+            DisplayBalance(teller, accountNum, accountArray[accountNum]);
+        }
+        vcSemSignal(mainSem);
     }
     return (THREAD_RET)1;
 }
 
-THREAD_RET Phil2(THREAD_PARAM param)
+THREAD_RET MainBranch(THREAD_PARAM param)
 {
-    int i;
-    for(i=0; i<m; i++)
+    int accountNum, amount;
+    while(TRUE)
     {
-        vcSemWait(room);
-        vcSemWait(fork2);
-        vcSemWait(fork3);
-        printf("%s is eating: loop %d\n", (char*)param, i);
-        vcSemSignal(fork3);
-        vcSemSignal(fork2);
-        vcSemSignal(room);
-    }
-    return (THREAD_RET)1;
-}
-
-THREAD_RET Phil3(THREAD_PARAM param)
-{
-    int i;
-    for(i=0; i<m; i++)
-    {
-        vcSemWait(room);
-        vcSemWait(fork3);
-        vcSemWait(fork4);
-        printf("%s is eating: loop %d\n", (char*)param, i);
-        vcSemSignal(fork4);
-        vcSemSignal(fork3);
-        vcSemSignal(room);
-    }
-    return (THREAD_RET)1;
-}
-
-THREAD_RET Phil4(THREAD_PARAM param)
-{
-    int i;
-    for(i=0; i<m; i++)
-    {
-        vcSemWait(room);
-        vcSemWait(fork4);
-        vcSemWait(fork5);
-        printf("%s is eating: loop %d\n", (char*)param, i);
-        vcSemSignal(fork5);
-        vcSemSignal(fork4);
-        vcSemSignal(room);
-    }
-    return (THREAD_RET)1;
-}
-
-THREAD_RET Phil5(THREAD_PARAM param)
-{
-    int i;
-    for(i=0; i<m; i++)
-    {
-        vcSemWait(room);
-        vcSemWait(fork5);
-        vcSemWait(fork1);
-        printf("%s is eating: loop %d\n", (char*)param, i);
-        vcSemSignal(fork1);
-        vcSemSignal(fork5);
-        vcSemSignal(room);
+        accountNum = rand() % accountCount;
+        amount = rand() % 100;
+        AddSalary(accountNum, amount);
+        vcSemSignal(tellerSem);
+        vcSemWait(mainSem);
     }
     return (THREAD_RET)1;
 }
 
 int main(void) 
 {
-    fork1 = vcSemCreate(1);
-    fork2 = vcSemCreate(1);
-    fork3 = vcSemCreate(1);
-    fork4 = vcSemCreate(1);
-    fork5 = vcSemCreate(1);
-    room = vcSemCreate(4);
-    vcThreadQueue(Phil1, (void*)"P1");
-    vcThreadQueue(Phil2, (void*)"P2");
-    vcThreadQueue(Phil3, (void*)"P3");
-    vcThreadQueue(Phil4, (void*)"P4");
-    vcThreadQueue(Phil5, (void*)"P5");
-    //vcThreadStart();
-    THREAD_RET* arr = vcThreadReturn();
-    int i; 
-    for(i = 0; i < 5; i++)
+    int i;
+    srand(abs(vcThreadId()));
+    accountSemArray = (vcSem**)malloc(sizeof(vcSem*)*accountCount);
+    semPrint = vcSemCreate(1);
+    tellerSem = vcSemCreateInitial(0, 1);
+    mainSem = vcSemCreateInitial(0, 1);
+    for(i=0; i<accountCount; i++)
     {
-        printf("Thread retrieved: %p\n", arr[i]);
+        accountSemArray[i] = vcSemCreate(1);
+        accountArray[i] = rand() % 100;
     }
-    free(arr);
-    return 0;
+    vcThreadQueue(MainBranch, NULL);
+    vcThreadQueue(Teller, (THREAD_PARAM)1);
+    vcThreadQueue(Teller, (THREAD_PARAM)2);
+    vcThreadStart();
+    return 1;
 }

@@ -28,7 +28,9 @@ void vcThreadQueue(threadFunc func, void* arg)
 void vcThreadQueueNamed(threadFunc func, void* arg, char* name)
 {
     CSThread* thread = threadCreate(func, arg);
-    char* mallocName = (char*)malloc(sizeof(char) * (vizconStringLength(name) + 1));
+    int i;
+    for(i=0; name[i] != '\0'; i++);
+    char* mallocName = (char*)malloc(sizeof(char) * (i + 1));
     if (mallocName == NULL) 
     {
         vizconError("vcThreadQueueNamed", 502);
@@ -173,10 +175,24 @@ void vcThreadSleep(int milliseconds)
     #endif
 }
 
+//returns the id of the calling thread
+int vcThreadId()
+{
+    #ifdef _WIN32
+    return GetCurrentThreadId();
+    #else
+    return pthread_self();
+    #endif
+}
+
 //Create a semaphore with a name and maximum permit count
 //All semaphores must have a name, and values must be an integer greater than zero
 vcSem* vcSemCreate(int count)
 {
+    if(count < 0)
+    {
+        vizconError("vcSemCreate", 503);
+    }
     vcSem* sem;
     if(vizconSemList == NULL)
     {
@@ -195,12 +211,49 @@ vcSem* vcSemCreate(int count)
     return sem;
 }
 
+//Create a semaphore with a name, an initial count, and a max count
+//All semaphores must have a name, and values must be an integer greater than zero
+vcSem* vcSemCreateInitial(int initialCount, int maxCount)
+{
+    if(initialCount < 0 || maxCount < 0)
+    {
+        vizconError("vcSemCreateInitial", 503);
+    }
+    vcSem* sem;
+    if(vizconSemList == NULL)
+    {
+        sem = semCreate(vizconCreateName(1, 0), maxCount);
+        sem->num = 0;
+        vizconSemListInitial = sem;
+        vizconSemList = sem;
+    }
+    else
+    {
+        sem = semCreate(vizconCreateName(1, vizconSemList->num + 1), maxCount);
+        sem->num = vizconSemList->num + 1;
+        vizconSemList->next = sem;
+        vizconSemList = sem;
+    }
+    int i;
+    for(i=0; i<maxCount-initialCount; i++)
+    {
+        vcSemWait(sem);
+    }
+    return sem;
+}
+
 //Create a semaphore with a name and maximum permit count
 //All semaphores must have a name, and values must be an integer greater than zero
 //Takes additional second parameter for user to assign a name to this semaphore
 vcSem* vcSemCreateNamed(int count, char* name)
 {
-    char* mallocName = (char*)malloc(sizeof(char) * (vizconStringLength(name) + 1));
+    if(count < 0)
+    {
+        vizconError("vcSemCreateNamed", 503);
+    }
+    int i;
+    for(i=0; name[i] != '\0'; i++);
+    char* mallocName = (char*)malloc(sizeof(char) * (i + 1));
     if (mallocName == NULL) 
     {
         vizconError("vcSemCreateNamed", 502);
@@ -218,6 +271,43 @@ vcSem* vcSemCreateNamed(int count, char* name)
         sem->num = vizconSemList->num + 1;
         vizconSemList->next = sem;
         vizconSemList = sem;
+    }
+    return sem;
+}
+
+//Create a semaphore with a name, an initial count, and a max count
+//All semaphores must have a name, and values must be an integer greater than zero
+//Takes additional second parameter for user to assign a name to this semaphore
+vcSem* vcSemCreateInitialNamed(int initialCount, int maxCount, char* name)
+{
+    if(initialCount < 0 || maxCount < 0)
+    {
+        vizconError("vcSemCreateInitialNamed", 503);
+    }
+    int i;
+    for(i=0; name[i] != '\0'; i++);
+    char* mallocName = (char*)malloc(sizeof(char) * (i + 1));
+    if (mallocName == NULL) 
+    {
+        vizconError("vcSemCreateInitialNamed", 502);
+    }
+    sprintf(mallocName, "%s", name);
+    vcSem* sem = semCreate(mallocName, maxCount);
+    if(vizconSemList == NULL)
+    {
+        sem->num = 0;
+        vizconSemListInitial = sem;
+        vizconSemList = sem;
+    }
+    else
+    {
+        sem->num = vizconSemList->num + 1;
+        vizconSemList->next = sem;
+        vizconSemList = sem;
+    }
+    for(i=0; i<maxCount-initialCount; i++)
+    {
+        vcSemWait(sem);
     }
     return sem;
 }
@@ -319,7 +409,9 @@ vcMutex* vcMutexCreate()
 //Takes a parameter for users to assign a name to this mutex
 vcMutex* vcMutexCreateNamed(char* name)
 {
-    char* mallocName = (char*)malloc(sizeof(char) * (vizconStringLength(name) + 1));
+    int i;
+    for(i=0; name[i] != '\0'; i++);
+    char* mallocName = (char*)malloc(sizeof(char) * (i + 1));
     if (mallocName == NULL) 
     {
         vizconError("vcMutexCreateNamed", 502);

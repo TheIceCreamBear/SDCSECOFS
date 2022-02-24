@@ -38,13 +38,6 @@ char* vizconCreateName(int type, int value)
     }
 }
 
-int vizconStringLength(char* name)
-{
-    int i;
-    for(i=0; name[i] != '\0'; i++);
-    return i;
-}
-
 //Handles error from concurrencylib and vcuserlibrary
 void vizconError(char* func, int err)
 {
@@ -86,6 +79,31 @@ void vizconError(char* func, int err)
             case 502:
             {
                 errorMessage = "Not enough memory resources are available to process this command.";
+                break;
+            }
+            case 503:
+            {
+                errorMessage = "A semaphore was created with a non-whole number value.";
+                break;
+            }
+            case 504:
+            {
+                errorMessage = "There was an error saving the internal mutex name.";
+                break;
+            }
+            case 510:
+            {
+                errorMessage = "A thread attempted to unlock an already-unlocked mutex.";
+                break;
+            }
+            case 511:
+            {
+                errorMessage = "A thread attempted to lock a mutex that it already locked.";
+                break;
+            }
+            case 512:
+            {
+                errorMessage = "A thread attempted to unlock an mutex that was locked by another thread.";
                 break;
             }
             default:

@@ -6,9 +6,8 @@
 vcSem **accountSemArray;
 vcSem *semPrint;
 vcSem *tellerSem;
-vcSem * mainSem;
+vcSem *mainSem;
 int accountArray[accountCount];
-int j;
 
 void DisplayBalance(int teller, int accountNum, int balance)
 {

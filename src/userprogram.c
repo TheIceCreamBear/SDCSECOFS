@@ -1,108 +1,126 @@
 // meta: the following 2 lines would not be in their source code, but appended by us before calling the compiler
 #include "vcuserlibrary.h"
 
-#define accountCount 4
+int BigInSmall = 20000, SmallInBig = -20000;
+vcSem *freeBinS, *freeSinB, *readyBinS, *readySinB, *display;
 
-vcSem **accountSemArray;
-vcSem *semPrint;
-vcSem *tellerSem;
-vcSem * mainSem;
-int accountArray[accountCount];
-int j;
-
-void DisplayBalance(int teller, int accountNum, int balance)
+char* printArray(int setInt, int stateInt, int* list, int len)
 {
-    vcSemWait(semPrint);
-    printf("Teller %d says that account number %d has a balance of %d\n", teller, accountNum, balance);
-    vcSemSignal(semPrint);
-}
-
-void DisplayError(int teller, int accountNum, int amount)
-{
-    vcSemWait(semPrint);
-    printf("Teller %d says that account number %d cannot withdraw %d\n", teller, accountNum, amount);
-    vcSemSignal(semPrint);
-}
-
-void AddSalary(int accountNum, int amount)
-{
-    vcSemWait(accountSemArray[accountNum]);
-    accountArray[accountNum] = accountArray[accountNum] + amount;
-    vcSemSignal(accountSemArray[accountNum]);
-}
-
-int Withdraw(int accountNum, int amount)
-{
-    vcSemWait(accountSemArray[accountNum]);
-    if(amount <= accountArray[accountNum])
+    int i;
+    char *set, *state;
+    if(setInt == 0)
     {
-        accountArray[accountNum] = accountArray[accountNum] - amount;
-        vcSemSignal(accountSemArray[accountNum]);
-        return 1;
+        set = "Small";
+        vcSemWait(display);
+        vcSemSignal(display);
     }
-    vcSemSignal(accountSemArray[accountNum]);
-    return 0;
+    else
+    {
+        set = "Big";
+        vcSemWaitMult(display, 2);
+    }
+    if(stateInt == 0)
+    {
+        state = "before";
+    }
+    else
+    {
+        state = "after";
+    }
+    printf("%s set (%s):", set, state);
+    for(i=0; i<len; i++)
+    {
+        printf(" %d", list[i]);
+    }
+    printf("\n");
+    if(setInt == 1 && stateInt == 0)
+    {
+        printf("\n");
+    }
+    vcSemSignal(display);
 }
 
-THREAD_RET Teller(THREAD_PARAM param)
+int GetMax(int* list, int len)
 {
-    int accountNum, amount, teller = (int)param;
-    srand(abs(vcThreadId()));
-    while(TRUE)
+    int i, max = 0;
+    for(i=1; i<len; i++)
     {
-        vcSemWait(tellerSem);
-        accountNum = rand() % accountCount;
-        if(rand() % 2)
+        if(list[i] > list[max])
         {
-            amount = rand() % 300;
-            if(Withdraw(accountNum, amount))
-            {
-                DisplayBalance(teller, accountNum, accountArray[accountNum]);
-            }
-            else
-            {
-                DisplayError(teller, accountNum, amount);
-            }
+            max = i;
         }
-        else
-        {
-            DisplayBalance(teller, accountNum, accountArray[accountNum]);
-        }
-        vcSemSignal(mainSem);
     }
+    return max;
+}
+
+int GetMin(int* list, int len)
+{
+    int i, min = 0;
+    for(i=1; i<len; i++)
+    {
+        if(list[i] < list[min])
+        {
+            min = i;
+        }
+    }
+    return min;
+}
+
+THREAD_RET SmallSet(THREAD_PARAM param)
+{
+    int len = 5, index;
+    int list[5] = {4, 1, 7, 5, 0};
+    printArray(0, 0, list, len);
+    while(BigInSmall > SmallInBig)
+    {
+        index = GetMax(list, len);
+        vcSemWait(freeBinS);
+        BigInSmall = list[index];
+        vcSemSignal(readyBinS);
+        vcSemWait(readySinB);
+        if(BigInSmall > SmallInBig)
+        {
+            list[index] = SmallInBig;
+        }
+        vcSemSignal(freeSinB);
+    }
+    vcSemSignal(readyBinS);
+    printArray(0, 1, list, len);
     return (THREAD_RET)1;
 }
 
-THREAD_RET MainBranch(THREAD_PARAM param)
+THREAD_RET BigSet(THREAD_PARAM param)
 {
-    int accountNum, amount;
-    while(TRUE)
+    int len = 4, index;
+    int list[4] = {1, 3, 2, 8};
+    printArray(1, 0, list, len);
+    while(BigInSmall > SmallInBig)
     {
-        accountNum = rand() % accountCount;
-        amount = rand() % 100;
-        AddSalary(accountNum, amount);
-        vcSemSignal(tellerSem);
-        vcSemWait(mainSem);
+        index = GetMin(list, len);
+        vcSemWait(freeSinB);
+        SmallInBig = list[index];
+        vcSemSignal(readySinB);
+        vcSemWait(readyBinS);
+        if(BigInSmall > SmallInBig)
+        {
+            list[index] = BigInSmall;
+        }
+        vcSemSignal(freeBinS);
     }
+    vcSemSignal(readySinB);
+    printArray(1, 1, list, len);
     return (THREAD_RET)1;
 }
 
 int main(void) 
 {
-    int i;
-    srand(abs(vcThreadId()));
-    accountSemArray = (vcSem**)malloc(sizeof(vcSem*)*accountCount);
-    semPrint = vcSemCreate(1);
-    tellerSem = vcSemCreateInitial(0, 1);
-    mainSem = vcSemCreateInitial(0, 1);
-    for(i=0; i<accountCount; i++)
-    {
-        accountSemArray[i] = vcSemCreate(1);
-        accountArray[i] = rand() % 100;
-    }
-    vcThreadQueue(MainBranch, NULL);
-    vcThreadQueue(Teller, (THREAD_PARAM)1);
-    vcThreadQueue(Teller, (THREAD_PARAM)2);
+    display = vcSemCreateInitial(1, 2);
+    freeBinS = vcSemCreate(1);
+    freeSinB = vcSemCreate(1);
+    readyBinS = vcSemCreateInitial(0, 1);
+    readySinB = vcSemCreateInitial(0, 1);
+    vcThreadQueue(SmallSet, NULL);
+    vcThreadQueue(BigSet, NULL);
     vcThreadStart();
     return 1;
 }

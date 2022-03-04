@@ -4,17 +4,17 @@
 //Threads do not begin until vcWaitForCompletion or vcWaitForReturn is called
 void vcThreadQueue(threadFunc func, void* arg)
 {
-    CSThread* thread = threadCreate(func, arg);
+    CSThread* thread;
     if(vizconThreadListInitial == NULL)
     {
-        thread->name = vizconCreateName(0, 0);
+        thread = threadCreate(func, arg, vizconCreateName(0, 0));
         thread->num = 0;
         vizconThreadList = thread;
         vizconThreadListInitial = thread;
     }
     else
     {
-        thread->name = vizconCreateName(0, vizconThreadList->num + 1);
+        thread = threadCreate(func, arg, vizconCreateName(0, vizconThreadList->num + 1));
         thread->num = vizconThreadList->num + 1;
         vizconThreadList->next = thread;
         vizconThreadList = thread;
@@ -27,14 +27,16 @@ void vcThreadQueue(threadFunc func, void* arg)
 //Takes additional third parameter for user to assign a name to this thread
 void vcThreadQueueNamed(threadFunc func, void* arg, char* name)
 {
-    CSThread* thread = threadCreate(func, arg);
-    char* mallocName = (char*)malloc(sizeof(char) * (vizconStringLength(name) + 1));
+    
+    int i;
+    for(i=0; name[i] != '\0'; i++);
+    char* mallocName = (char*)malloc(sizeof(char) * (i + 1));
     if (mallocName == NULL) 
     {
         vizconError("vcThreadQueueNamed", 502);
     }
     sprintf(mallocName, "%s", name);
-    thread->name = mallocName;
+    CSThread* thread = threadCreate(func, arg, mallocName);
     if(vizconThreadListInitial == NULL)
     {
         thread->num = 0;
@@ -173,10 +175,24 @@ void vcThreadSleep(int milliseconds)
     #endif
 }
 
-//Create a semaphore with a name and maximum permit count
-//All semaphores must have a name, and values must be an integer greater than zero
+//returns the id of the calling thread
+int vcThreadId()
+{
+    #ifdef _WIN32
+    return GetCurrentThreadId();
+    #else
+    return pthread_self();
+    #endif
+}
+
+//Create a semaphore with a maximum count
+//All semaphores values must be a postive integer
 vcSem* vcSemCreate(int count)
 {
+    if(count <= 0)
+    {
+        vizconError("vcSemCreate", 503);
+    }
     vcSem* sem;
     if(vizconSemList == NULL)
     {
@@ -195,12 +211,49 @@ vcSem* vcSemCreate(int count)
     return sem;
 }
 
-//Create a semaphore with a name and maximum permit count
-//All semaphores must have a name, and values must be an integer greater than zero
+//Create a semaphore with an initial count and a max count
+//All semaphores must have a name, and values must be a positive integer, except initial count which may be 0
+vcSem* vcSemCreateInitial(int initialCount, int maxCount)
+{
+    if(initialCount < 0 || maxCount <= 0)
+    {
+        vizconError("vcSemCreateInitial", 503);
+    }
+    vcSem* sem;
+    if(vizconSemList == NULL)
+    {
+        sem = semCreate(vizconCreateName(1, 0), maxCount);
+        sem->num = 0;
+        vizconSemListInitial = sem;
+        vizconSemList = sem;
+    }
+    else
+    {
+        sem = semCreate(vizconCreateName(1, vizconSemList->num + 1), maxCount);
+        sem->num = vizconSemList->num + 1;
+        vizconSemList->next = sem;
+        vizconSemList = sem;
+    }
+    int i;
+    for(i=0; i<maxCount-initialCount; i++)
+    {
+        vcSemWait(sem);
+    }
+    return sem;
+}
+
+//Create a semaphore with a maximum count
+//All semaphores values must be a postive integer
 //Takes additional second parameter for user to assign a name to this semaphore
 vcSem* vcSemCreateNamed(int count, char* name)
 {
-    char* mallocName = (char*)malloc(sizeof(char) * (vizconStringLength(name) + 1));
+    if(count <= 0)
+    {
+        vizconError("vcSemCreateNamed", 503);
+    }
+    int i;
+    for(i=0; name[i] != '\0'; i++);
+    char* mallocName = (char*)malloc(sizeof(char) * (i + 1));
     if (mallocName == NULL) 
     {
         vizconError("vcSemCreateNamed", 502);
@@ -222,10 +275,74 @@ vcSem* vcSemCreateNamed(int count, char* name)
     return sem;
 }
 
-//Consume one permit from a semaphore, or wait until one is available.
+//Create a semaphore with an initial count and a max count
+//All semaphores must have a name, and values must be a positive integer, except initial count which may be 0
+//Takes additional third parameter for user to assign a name to this semaphore
+vcSem* vcSemCreateInitialNamed(int initialCount, int maxCount, char* name)
+{
+    if(initialCount < 0 || maxCount <= 0)
+    {
+        vizconError("vcSemCreateInitialNamed", 503);
+    }
+    int i;
+    for(i=0; name[i] != '\0'; i++);
+    char* mallocName = (char*)malloc(sizeof(char) * (i + 1));
+    if (mallocName == NULL) 
+    {
+        vizconError("vcSemCreateInitialNamed", 502);
+    }
+    sprintf(mallocName, "%s", name);
+    vcSem* sem = semCreate(mallocName, maxCount);
+    if(vizconSemList == NULL)
+    {
+        sem->num = 0;
+        vizconSemListInitial = sem;
+        vizconSemList = sem;
+    }
+    else
+    {
+        sem->num = vizconSemList->num + 1;
+        vizconSemList->next = sem;
+        vizconSemList = sem;
+    }
+    for(i=0; i<maxCount-initialCount; i++)
+    {
+        vcSemWait(sem);
+    }
+    return sem;
+}
+
+//Consume one permit from a semaphore, or wait until one is available
 void vcSemWait(vcSem* sem)
 {
     semWait(sem);
+}
+
+//Consume a number of permits from a semaphore equal to a user-specified number
+//Will not consume any permits until all are simultaneously available
+void vcSemWaitMult(vcSem* sem, int num)
+{
+    int i;
+    while(1)
+    {
+        while(vcSemValue(sem) < num);
+        for(i=0; i<num; i++)
+        {
+            if(!vcSemTryWait(sem))
+            {
+                for(i=i; i>0; i--)
+                {
+                    vcSemSignal(sem);
+                }
+                i = -1;
+                break;
+            }
+        }
+        if(i != -1)
+        {
+            return;
+        }
+    }
 }
 
 //Consume one permit from a sempahore, or return immediately if none are available
@@ -239,16 +356,49 @@ int vcSemTryWait(vcSem* sem)
     return 0;
 }
 
+//Consume a number of permits from a sempahore equal to a user-specified number, or return immediately if all are not available
+//Returns 1 if successful, else 0
+int vcSemTryWaitMult(vcSem* sem, int num)
+{
+    int i;
+    if(vcSemValue(sem) < num)
+    {
+        return 0;
+    }
+    for(i=0; i<num; i++)
+    {
+        if(!vcSemTryWait(sem))
+        {
+            for(i=i; i>0; i--)
+            {
+                vcSemSignal(sem);
+            }
+            return 0;
+        }
+    }
+    return 1;
+}
+
 //Release one permit from a semaphore
 void vcSemSignal(vcSem* sem)
 {
     semSignal(sem);
 }
 
+//Release a number of permits from a sempahore equal to a user-specified number
+void vcSemSignalMult(vcSem* sem, int num)
+{
+    int i;
+    for(i=0; i<num; i++)
+    {
+        semSignal(sem);
+    }
+}
+
 //Return the current number of permits from semaphore
 int vcSemValue(vcSem* sem)
 {
-    return semValue(sem);
+    return sem->count;
 }
 
 //Create a mutex lock in an unlocked state
@@ -276,7 +426,9 @@ vcMutex* vcMutexCreate()
 //Takes a parameter for users to assign a name to this mutex
 vcMutex* vcMutexCreateNamed(char* name)
 {
-    char* mallocName = (char*)malloc(sizeof(char) * (vizconStringLength(name) + 1));
+    int i;
+    for(i=0; name[i] != '\0'; i++);
+    char* mallocName = (char*)malloc(sizeof(char) * (i + 1));
     if (mallocName == NULL) 
     {
         vizconError("vcMutexCreateNamed", 502);

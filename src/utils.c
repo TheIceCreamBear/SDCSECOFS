@@ -38,13 +38,6 @@ char* vizconCreateName(int type, int value)
     }
 }
 
-int vizconStringLength(char* name)
-{
-    int i;
-    for(i=0; name[i] != '\0'; i++);
-    return i;
-}
-
 //Handles error from concurrencylib and vcuserlibrary
 void vizconError(char* func, int err)
 {
@@ -63,6 +56,7 @@ void vizconError(char* func, int err)
     if(err < 500)
     {
         sprintf(message, "%serrno code %d", message, err);
+        errno = err; 
         perror(message);
         exit(0);
     }
@@ -87,12 +81,46 @@ void vizconError(char* func, int err)
                 errorMessage = "Not enough memory resources are available to process this command.";
                 break;
             }
+            case 503:
+            {
+                errorMessage = "A semaphore was created with a non-whole number value.";
+                break;
+            }
+            case 504:
+            {
+                errorMessage = "There was an error saving the internal mutex name.";
+                break;
+            }
+            case 505:
+            {
+                errorMessage = "There was an error creating a thread with the given name.";
+                break;
+            }
+            case 506:
+            {
+                errorMessage = "There was an error closing a thread.";
+                break;
+            }
+            case 510:
+            {
+                errorMessage = "A thread attempted to unlock an already-unlocked mutex.";
+                break;
+            }
+            case 511:
+            {
+                errorMessage = "A thread attempted to lock a mutex that it already locked.";
+                break;
+            }
+            case 512:
+            {
+                errorMessage = "A thread attempted to unlock an mutex that was locked by another thread.";
+                break;
+            }
             default:
             {
                 errorMessage = "An unknown error has occurred.";
             }
         }
-
     }
     sprintf(message, "%s code %d: %s\n", message, err, errorMessage);
     printf("%s", message);

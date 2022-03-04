@@ -13,7 +13,6 @@
 
 //Other functions
 char* vizconCreateName(int type, int value);
-int vizconStringLength(char* name);
 void vizconError(char* func, int err);
 
 #endif

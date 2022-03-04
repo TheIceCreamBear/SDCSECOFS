@@ -1,109 +1,115 @@
 // meta: the following 2 lines would not be in their source code, but appended by us before calling the compiler
 #include "vcuserlibrary.h"
 
-vcSem *fork1, *fork2, *fork3, *fork4, *fork5, *room;
-int m = 20;
+#define size 10
 
-THREAD_RET Phil1(THREAD_PARAM param)
+int array[size];
+
+void Merge(int begin, int mid, int end)
 {
-    int i;
-    for(i=0; i<m; i++)
+    int i, j, k;
+    int length1 = mid - begin;
+    int length2 = end - mid;
+    int array1[length1];
+    int array2[length2];
+
+    for(i=0; i<length1; i++)
     {
-        vcSemWait(room);
-        vcSemWait(fork1);
-        vcSemWait(fork2);
-        printf("%s is eating: loop %d\n", (char*)param, i);
-        vcSemSignal(fork2);
-        vcSemSignal(fork1);
-        vcSemSignal(room);
+        array1[i] = array[begin+i];
     }
-    return (THREAD_RET)1;
+    for(j=0; j<length2; j++)
+    {
+        array2[j] = array[mid+j];
+    }
+
+    i = 0;
+    j = 0;
+    k = begin;
+    while(i < length1 && j < length2)
+    {
+        if(array1[i] <= array2[j])
+        {
+            array[k] = array1[i];
+            i++;
+        }
+        else
+        {
+            array[k] = array2[j];
+            j++;
+        }
+        k++;
+    }
+
+    while(i < length1)
+    {
+        array[k] = array1[i];
+        i++;
+        k++;
+    }
+
+    while(j < length2)
+    {
+        array[k] = array2[j];
+        j++;
+        k++;
+    }
+
+    return;
 }
 
-THREAD_RET Phil2(THREAD_PARAM param)
+THREAD_RET MergeSort(THREAD_PARAM param)
 {
-    int i;
-    for(i=0; i<m; i++)
+    int *thisParam = (int*)param;
+    int begin = thisParam[0];
+    int end = thisParam[1];
+    int mid = begin + (end - begin) / 2 + (end - begin) % 2;
+
+    if(mid == end)
     {
-        vcSemWait(room);
-        vcSemWait(fork2);
-        vcSemWait(fork3);
-        printf("%s is eating: loop %d\n", (char*)param, i);
-        vcSemSignal(fork3);
-        vcSemSignal(fork2);
-        vcSemSignal(room);
+        return 1;
     }
-    return (THREAD_RET)1;
+    thisParam[0] = begin;
+    thisParam[1] = mid;
+    MergeSort(thisParam);
+    thisParam[0] = mid;
+    thisParam[1] = end;
+    MergeSort(thisParam);
+    Merge(begin, mid, end);
+
+    return 1;
 }
 
-THREAD_RET Phil3(THREAD_PARAM param)
+void printArray(char* state)
 {
     int i;
-    for(i=0; i<m; i++)
+    printf("Array:");
+    for(i=0; i<size; i++)
     {
-        vcSemWait(room);
-        vcSemWait(fork3);
-        vcSemWait(fork4);
-        printf("%s is eating: loop %d\n", (char*)param, i);
-        vcSemSignal(fork4);
-        vcSemSignal(fork3);
-        vcSemSignal(room);
+        printf(" %d", array[i]);
     }
-    return (THREAD_RET)1;
-}
-
-THREAD_RET Phil4(THREAD_PARAM param)
-{
-    int i;
-    for(i=0; i<m; i++)
-    {
-        vcSemWait(room);
-        vcSemWait(fork4);
-        vcSemWait(fork5);
-        printf("%s is eating: loop %d\n", (char*)param, i);
-        vcSemSignal(fork5);
-        vcSemSignal(fork4);
-        vcSemSignal(room);
-    }
-    return (THREAD_RET)1;
-}
-
-THREAD_RET Phil5(THREAD_PARAM param)
-{
-    int i;
-    for(i=0; i<m; i++)
-    {
-        vcSemWait(room);
-        vcSemWait(fork5);
-        vcSemWait(fork1);
-        printf("%s is eating: loop %d\n", (char*)param, i);
-        vcSemSignal(fork1);
-        vcSemSignal(fork5);
-        vcSemSignal(room);
-    }
-    return (THREAD_RET)1;
+    printf("%s\n", state);
 }
 
 int main(void) 
 {
-    fork1 = vcSemCreate(1);
-    fork2 = vcSemCreate(1);
-    fork3 = vcSemCreate(1);
-    fork4 = vcSemCreate(1);
-    fork5 = vcSemCreate(1);
-    room = vcSemCreate(4);
-    vcThreadQueue(Phil1, (void*)"P1");
-    vcThreadQueue(Phil2, (void*)"P2");
-    vcThreadQueue(Phil3, (void*)"P3");
-    vcThreadQueue(Phil4, (void*)"P4");
-    vcThreadQueue(Phil5, (void*)"P5");
-    //vcThreadStart();
-    THREAD_RET* arr = vcThreadReturn();
-    int i; 
-    for(i = 0; i < 5; i++)
+    int i;
+    int begin = 0;
+    int mid = size/2 + size%2;
+    int end = size;
+    int param1[2] = {begin, mid};
+    int param2[2] = {mid, end};
+    srand(abs(vcThreadId()));
+    for(i=0; i<size; i++)
     {
-        printf("Thread retrieved: %p\n", arr[i]);
+        array[i] = rand() % 100;
     }
-    free(arr);
-    return 0;
+
+    printArray(" -> Before\n");
+    vcThreadQueue(MergeSort, param1);
+    vcThreadQueue(MergeSort, param2);
+    vcThreadStart();
+    Merge(begin, mid, end);
+    printArray(" -> After");
+
+    return 1;
 }

@@ -17,7 +17,7 @@ CSSem* semCreate(SEM_NAME name, SEM_VALUE maxValue)
     sem->num = -1;
     #if defined(_WIN32) // windows
     sem->sem = CreateSemaphoreA(NULL, maxValue, maxValue, name);
-    if(sem->sem == NULL)
+    if(sem->sem == NULL || GetLastError() == ERROR_ALREADY_EXISTS)
     {
         int err = (int)GetLastError();
         free(sem);
@@ -120,12 +120,6 @@ int semTryWait(CSSem* sem)
     }
     #endif
     return 0;
-}
-
-//Returns semaphore's current value
-int semValue(CSSem* sem)
-{
-    return sem->count;
 }
 
 //Frees all data associated with a CSSem type, including itself

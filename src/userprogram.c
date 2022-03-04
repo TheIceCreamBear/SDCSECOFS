@@ -1,126 +1,115 @@
 // meta: the following 2 lines would not be in their source code, but appended by us before calling the compiler
 #include "vcuserlibrary.h"
 
-int BigInSmall = 20000, SmallInBig = -20000;
-vcSem *freeBinS, *freeSinB, *readyBinS, *readySinB, *display;
+#define size 10
 
-char* printArray(int setInt, int stateInt, int* list, int len)
+int array[size];
+
+void Merge(int begin, int mid, int end)
+{
+    int i, j, k;
+    int length1 = mid - begin;
+    int length2 = end - mid;
+    int array1[length1];
+    int array2[length2];
+
+    for(i=0; i<length1; i++)
+    {
+        array1[i] = array[begin+i];
+    }
+    for(j=0; j<length2; j++)
+    {
+        array2[j] = array[mid+j];
+    }
+
+    i = 0;
+    j = 0;
+    k = begin;
+    while(i < length1 && j < length2)
+    {
+        if(array1[i] <= array2[j])
+        {
+            array[k] = array1[i];
+            i++;
+        }
+        else
+        {
+            array[k] = array2[j];
+            j++;
+        }
+        k++;
+    }
+
+    while(i < length1)
+    {
+        array[k] = array1[i];
+        i++;
+        k++;
+    }
+
+    while(j < length2)
+    {
+        array[k] = array2[j];
+        j++;
+        k++;
+    }
+
+    return;
+}
+
+THREAD_RET MergeSort(THREAD_PARAM param)
+{
+    int *thisParam = (int*)param;
+    int begin = thisParam[0];
+    int end = thisParam[1];
+    int mid = begin + (end - begin) / 2 + (end - begin) % 2;
+
+    if(mid == end)
+    {
+        return 1;
+    }
+    thisParam[0] = begin;
+    thisParam[1] = mid;
+    MergeSort(thisParam);
+    thisParam[0] = mid;
+    thisParam[1] = end;
+    MergeSort(thisParam);
+    Merge(begin, mid, end);
+
+    return 1;
+}
+
+void printArray(char* state)
 {
     int i;
-    char *set, *state;
-    if(setInt == 0)
+    printf("Array:");
+    for(i=0; i<size; i++)
     {
-        set = "Small";
-        vcSemWait(display);
-        vcSemSignal(display);
+        printf(" %d", array[i]);
     }
-    else
-    {
-        set = "Big";
-        vcSemWaitMult(display, 2);
-    }
-    if(stateInt == 0)
-    {
-        state = "before";
-    }
-    else
-    {
-        state = "after";
-    }
-    printf("%s set (%s):", set, state);
-    for(i=0; i<len; i++)
-    {
-        printf(" %d", list[i]);
-    }
-    printf("\n");
-    if(setInt == 1 && stateInt == 0)
-    {
-        printf("\n");
-    }
-    vcSemSignal(display);
-}
-
-int GetMax(int* list, int len)
-{
-    int i, max = 0;
-    for(i=1; i<len; i++)
-    {
-        if(list[i] > list[max])
-        {
-            max = i;
-        }
-    }
-    return max;
-}
-
-int GetMin(int* list, int len)
-{
-    int i, min = 0;
-    for(i=1; i<len; i++)
-    {
-        if(list[i] < list[min])
-        {
-            min = i;
-        }
-    }
-    return min;
-}
-
-THREAD_RET SmallSet(THREAD_PARAM param)
-{
-    int len = 5, index;
-    int list[5] = {4, 1, 7, 5, 0};
-    printArray(0, 0, list, len);
-    while(BigInSmall > SmallInBig)
-    {
-        index = GetMax(list, len);
-        vcSemWait(freeBinS);
-        BigInSmall = list[index];
-        vcSemSignal(readyBinS);
-        vcSemWait(readySinB);
-        if(BigInSmall > SmallInBig)
-        {
-            list[index] = SmallInBig;
-        }
-        vcSemSignal(freeSinB);
-    }
-    vcSemSignal(readyBinS);
-    printArray(0, 1, list, len);
-    return (THREAD_RET)1;
-}
-
-THREAD_RET BigSet(THREAD_PARAM param)
-{
-    int len = 4, index;
-    int list[4] = {1, 3, 2, 8};
-    printArray(1, 0, list, len);
-    while(BigInSmall > SmallInBig)
-    {
-        index = GetMin(list, len);
-        vcSemWait(freeSinB);
-        SmallInBig = list[index];
-        vcSemSignal(readySinB);
-        vcSemWait(readyBinS);
-        if(BigInSmall > SmallInBig)
-        {
-            list[index] = BigInSmall;
-        }
-        vcSemSignal(freeBinS);
-    }
-    vcSemSignal(readySinB);
-    printArray(1, 1, list, len);
-    return (THREAD_RET)1;
+    printf("%s\n", state);
 }
 
 int main(void) 
 {
-    display = vcSemCreateInitial(1, 2);
-    freeBinS = vcSemCreate(1);
-    freeSinB = vcSemCreate(1);
-    readyBinS = vcSemCreateInitial(0, 1);
-    readySinB = vcSemCreateInitial(0, 1);
-    vcThreadQueue(SmallSet, NULL);
-    vcThreadQueue(BigSet, NULL);
+    int i;
+    int begin = 0;
+    int mid = size/2 + size%2;
+    int end = size;
+    int param1[2] = {begin, mid};
+    int param2[2] = {mid, end};
+    srand(abs(vcThreadId()));
+    for(i=0; i<size; i++)
+    {
+        array[i] = rand() % 100;
+    }
+
+    printArray(" -> Before\n");
+    vcThreadQueue(MergeSort, param1);
+    vcThreadQueue(MergeSort, param2);
     vcThreadStart();
+    Merge(begin, mid, end);
+    printArray(" -> After");
+
     return 1;
 }

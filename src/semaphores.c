@@ -17,7 +17,7 @@ CSSem* semCreate(SEM_NAME name, SEM_VALUE maxValue)
     sem->num = -1;
     #if defined(_WIN32) // windows
     sem->sem = CreateSemaphoreA(NULL, maxValue, maxValue, name);
-    if(sem->sem == NULL)
+    if(sem->sem == NULL || GetLastError() == ERROR_ALREADY_EXISTS)
     {
         int err = (int)GetLastError();
         free(sem);

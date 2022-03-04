@@ -23,6 +23,7 @@ typedef struct CSThread
     int num;
     #if defined(_WIN32) // windows
         THREAD_RET id;
+        HANDLE eventName;
     #elif defined(__APPLE__) || defined(__linux__)
         threadFunc func;
         void* arg;
@@ -32,7 +33,7 @@ typedef struct CSThread
 } CSThread;
 
 //Thread functions 
-CSThread* threadCreate(threadFunc func, void* arg);
+CSThread* threadCreate(threadFunc func, void* arg, char* name);
 void threadStart(CSThread* thread);
 void threadJoin(CSThread* thread);
 void threadClose(CSThread* thread);

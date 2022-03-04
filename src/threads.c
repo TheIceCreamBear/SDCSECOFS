@@ -2,7 +2,7 @@
 
 //Create a CSThread that does not start until WaitForCompletion or WaitForReturn is called
 //arg parameter must have funcion at head of array
-CSThread* threadCreate(threadFunc func, void* arg) 
+CSThread* threadCreate(threadFunc func, void* arg, char* name) 
 {
     CSThread* thread = (CSThread*)malloc(sizeof(CSThread));
     if (thread == NULL) 
@@ -10,15 +10,21 @@ CSThread* threadCreate(threadFunc func, void* arg)
         vizconError("vcThreadQueue", 502);
     }
     thread->next = NULL;
-    thread->name = NULL;
+    thread->name = name;
     thread->num = -1;
     #if defined(_WIN32) // windows
     thread->thread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)func, arg, CREATE_SUSPENDED, &(thread->id));
-    if(thread->thread == NULL)
+    thread->eventName = CreateEventA(NULL, FALSE, FALSE, name);
+    if(thread->thread == NULL || GetLastError() == ERROR_ALREADY_EXISTS || thread->eventName == NULL)
     {
         int err = (int)GetLastError();
         free(thread);
         free(arg);
+        free(name);
+        if(thread->eventName == NULL)
+        {
+            vizconError("vcThreadQueue", 505);
+        }
         vizconError("vcThreadQueue", err);
     }
     #elif defined(__APPLE__) || defined(__linux__)
@@ -44,7 +50,6 @@ void threadStart(CSThread* thread)
         vizconError("vcThreadQueue", err);
     }
     #endif
-    
 }
 
  //Waits for thread to complete before being joined back into main function
@@ -88,6 +93,10 @@ void threadClose(CSThread* thread)
     if(!CloseHandle(thread->thread))
     {
         vizconError("vcThreadStart/vcThreadReturn", GetLastError());
+    }
+    if(!CloseHandle(thread->eventName))
+    {
+        vizconError("vcThreadStart/vcThreadReturn", 506);
     }
     free(thread);
     #else

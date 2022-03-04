@@ -91,6 +91,16 @@ void vizconError(char* func, int err)
                 errorMessage = "There was an error saving the internal mutex name.";
                 break;
             }
+            case 505:
+            {
+                errorMessage = "There was an error creating a thread with the given name.";
+                break;
+            }
+            case 506:
+            {
+                errorMessage = "There was an error closing a thread.";
+                break;
+            }
             case 510:
             {
                 errorMessage = "A thread attempted to unlock an already-unlocked mutex.";

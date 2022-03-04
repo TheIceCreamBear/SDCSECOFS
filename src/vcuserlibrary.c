@@ -4,17 +4,17 @@
 //Threads do not begin until vcWaitForCompletion or vcWaitForReturn is called
 void vcThreadQueue(threadFunc func, void* arg)
 {
-    CSThread* thread = threadCreate(func, arg);
+    CSThread* thread;
     if(vizconThreadListInitial == NULL)
     {
-        thread->name = vizconCreateName(0, 0);
+        thread = threadCreate(func, arg, vizconCreateName(0, 0));
         thread->num = 0;
         vizconThreadList = thread;
         vizconThreadListInitial = thread;
     }
     else
     {
-        thread->name = vizconCreateName(0, vizconThreadList->num + 1);
+        thread = threadCreate(func, arg, vizconCreateName(0, vizconThreadList->num + 1));
         thread->num = vizconThreadList->num + 1;
         vizconThreadList->next = thread;
         vizconThreadList = thread;
@@ -27,7 +27,7 @@ void vcThreadQueue(threadFunc func, void* arg)
 //Takes additional third parameter for user to assign a name to this thread
 void vcThreadQueueNamed(threadFunc func, void* arg, char* name)
 {
-    CSThread* thread = threadCreate(func, arg);
+    
     int i;
     for(i=0; name[i] != '\0'; i++);
     char* mallocName = (char*)malloc(sizeof(char) * (i + 1));
@@ -36,7 +36,7 @@ void vcThreadQueueNamed(threadFunc func, void* arg, char* name)
         vizconError("vcThreadQueueNamed", 502);
     }
     sprintf(mallocName, "%s", name);
-    thread->name = mallocName;
+    CSThread* thread = threadCreate(func, arg, mallocName);
     if(vizconThreadListInitial == NULL)
     {
         thread->num = 0;
